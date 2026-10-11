@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pod Placer</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #16181d; --muted: #5d6573; --line: #d9dde3;
+    --grid-minor: #eceef2; --grid-major: #d3d8df; --axis: #9aa3b1;
+    --chassis-fill: rgba(22, 24, 29, 0.04); --chassis-line: #16181d;
+    --pod0: #2563eb; --pod3: #c2410c; --accent: #16181d; --accent-ink: #ffffff;
+    --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --warn-bg: #fff7ed; --bad-bg: #fef2f2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111317; --panel: #1a1d23; --ink: #e8eaee; --muted: #9aa3b1; --line: #2c313a;
+      --grid-minor: #1d2027; --grid-major: #2c313a; --axis: #5d6573;
+      --chassis-fill: rgba(232, 234, 238, 0.04); --chassis-line: #e8eaee;
+      --pod0: #60a5fa; --pod3: #fb923c; --accent: #e8eaee; --accent-ink: #111317;
+      --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --warn-bg: #2a2112; --bad-bg: #2a1515;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: grid; grid-template-rows: auto auto 1fr; overflow: hidden;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+    background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 650; }
+  header .file { color: var(--muted); font: 12px ui-monospace, Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  header .spacer { flex: 1; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+  .status.dirty .dot { background: var(--warn); }
+  .status.error .dot { background: var(--bad); }
+  button {
+    font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    border-radius: 6px; padding: 6px 12px; cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  #banner { display: none; padding: 10px 16px; gap: 12px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+  #banner.show { display: flex; }
+  #banner.warn { background: var(--warn-bg); }
+  #banner.bad { background: var(--bad-bg); }
+  #banner .msg { flex: 1; min-width: 240px; }
+  main { display: grid; grid-template-columns: 1fr 340px; min-height: 0; }
+  #stage { position: relative; min-width: 0; min-height: 0; }
+  svg { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; cursor: grab; }
+  svg.panning { cursor: grabbing; }
+  .zoom { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; }
+  .zoom button { width: 34px; padding: 6px 0; }
+  .hint { position: absolute; left: 12px; bottom: 12px; color: var(--muted); font-size: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; max-width: calc(100% - 180px); }
+  aside { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .card.selected { border-color: var(--sel); box-shadow: 0 0 0 1px var(--sel); }
+  .card h2 { font-size: 14px; margin: 0 0 2px; display: flex; align-items: center; gap: 8px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; background: var(--sel); }
+  .role { color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+  .row { display: grid; grid-template-columns: 1fr 90px; gap: 8px; align-items: center; margin: 6px 0; }
+  .row label { font-size: 13px; }
+  .row .plain { grid-column: 1 / -1; color: var(--muted); font-size: 12px; margin-top: -4px; }
+  input[type=number] {
+    font: inherit; width: 100%; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--bg); color: var(--ink); text-align: right;
+  }
+  input.invalid { border-color: var(--bad); }
+  .arrows-label { font-size: 13px; margin: 10px 0 6px; }
+  .compass { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 32px); gap: 4px; justify-content: start; }
+  .compass button { padding: 0; font-size: 12px; }
+  .compass button[aria-pressed=true] { background: var(--sel); border-color: var(--sel); color: #fff; }
+  .compass .c { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; }
+  .expect { font-size: 12px; color: var(--muted); }
+  .expect code { font: 12px ui-monospace, Consolas, monospace; color: var(--ink); }
+  .err { color: var(--bad); font-size: 13px; }
+  details summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+  details p, details li { font-size: 12px; color: var(--muted); }
+  kbd { font: 11px ui-monospace, Consolas, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+  @media (max-width: 760px) {
+    body { overflow: auto; }
+    main { grid-template-columns: 1fr; grid-template-rows: 60vh auto; }
+    aside { border-left: 0; border-top: 1px solid var(--line); }
+    .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Pod Placer</h1>
+  <span class="file" id="file">loading…</span>
+  <span class="spacer"></span>
+  <span class="status" id="status"><span class="dot"></span><span id="statusText">Loading</span></span>
+  <button id="revert" disabled title="Throw away edits and reload the file">Revert</button>
+  <button id="save" class="primary" disabled title="Write to the file (Ctrl+S)">Save</button>
+</header>
+<div id="banner"><span class="msg" id="bannerMsg"></span><span id="bannerButtons"></span></div>
+<main>
+  <div id="stage">
+    <svg id="svg" aria-label="Robot top view with odometry pods"></svg>
+    <div class="hint">Drag a pod to move it (snaps to 0.1 in; hold <kbd>Shift</kbd> for 0.01). <kbd>R</kbd> rotates the selected pod. Scroll to zoom, drag empty space to pan.</div>
+    <div class="zoom">
+      <button id="zoomIn" title="Zoom in">+</button>
+      <button id="zoomOut" title="Zoom out">−</button>
+      <button id="zoomFit" title="Fit robot" style="width:auto;padding:6px 10px">Fit</button>
+    </div>
+  </div>
+  <aside id="side"></aside>
+</main>
+
+<script>
+"use strict";
+
+const PODS = [
+  { key: "PORT0", title: "Pod on encoder port 0", color: "--pod0" },
+  { key: "PORT3", title: "Pod on encoder port 3", color: "--pod3" },
+];
+const ARROW_NAMES = { 0: "front", 90: "left", 180: "back", 270: "right" };
+const WHEEL_LEN = 1.26, WHEEL_W = 0.55;   // goBILDA 4-bar pod's 32 mm wheel, seen from above
+
+let saved = null;        // values as last loaded/saved from disk
+let values = null;       // values being edited
+let baseHash = null;     // hash of the file version `saved` came from
+let diskChanged = false; // file changed on disk while we have unsaved edits
+let selected = "PORT0";
+let serverDown = false;
+let saving = false;     // a save is in flight; polling would see our own write
+
+// ---- view (inches; SVG x = robot's RIGHT, SVG y = robot's BACK) ----
+const view = { cx: 0, cy: 0, scale: 32 };   // scale = pixels per inch
+const svg = document.getElementById("svg");
+const NS = "http://www.w3.org/2000/svg";
+
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const round = (v, step) => Math.round(v / step) * step;
+const clean = v => Math.round(v * 10000) / 10000;
+const fmt = (v, d = 2) => (Math.round(v * 10 ** d) / 10 ** d).toFixed(d).replace(/\.?0+$/, "") || "0";
+const isDirty = () => saved && values && JSON.stringify(saved) !== JSON.stringify(values);
+const rollsForward = deg => deg === 0 || deg === 180;
+
+function podVals(key) {
+  return {
+    fwd: values[key + "_POD_FORWARD_IN"],
+    left: values[key + "_POD_LEFT_IN"],
+    arrow: values[key + "_POD_ARROW_DEG"],
+  };
+}
+function setPod(key, part, v) {
+  const name = { fwd: "_POD_FORWARD_IN", left: "_POD_LEFT_IN", arrow: "_POD_ARROW_DEG" }[part];
+  values[key + name] = part === "arrow" ? v : clean(v);
+  update();
+}
+
+function layoutError() {
+  const a = rollsForward(podVals("PORT0").arrow), b = rollsForward(podVals("PORT3").arrow);
+  if (a === b) return "Both pods roll " + (a ? "front-to-back" : "side-to-side") +
+      ". One must roll front-to-back (forward pod) and the other side-to-side (strafe pod).";
+  return null;
+}
+
+// Mirrors OdometryPods.resolve() — keep in sync. Display only; the robot
+// computes its own values from the saved file.
+function expectedTuner() {
+  const p0 = podVals("PORT0"), p3 = podVals("PORT3");
+  const fwdPod = rollsForward(p0.arrow) ? p0 : p3;
+  const strPod = rollsForward(p0.arrow) ? p3 : p0;
+  return { forwardY: -fwdPod.left, strafeX: strPod.fwd };
+}
+
+// ---------------- drawing ----------------
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+function viewBox() {
+  const r = svg.getBoundingClientRect();
+  const w = r.width / view.scale, h = r.height / view.scale;
+  return { x: view.cx - w / 2, y: view.cy - h / 2, w, h, r };
+}
+
+function draw() {
+  if (!values) return;
+  const vb = viewBox();
+  svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+  svg.textContent = "";
+  const px = 1 / view.scale;   // one screen pixel, in inches
+  const font = 11 * px;
+
+  // grid
+  const C = { minor: css("--grid-minor"), major: css("--grid-major"), axis: css("--axis") };
+  const grid = el("g", {}, svg);
+  const minorOn = view.scale * 0.1 >= 3;
+  const step = minorOn ? 1 : 10;   // in tenths of an inch
+  for (let i = Math.ceil(vb.x * 10 / step) * step; i <= vb.x * 10 + vb.w * 10; i += step) {
+    const major = i % 10 === 0;
+    el("line", { x1: i / 10, y1: vb.y, x2: i / 10, y2: vb.y + vb.h,
+      stroke: i === 0 ? C.axis : major ? C.major : C.minor, "stroke-width": px }, grid);
+  }
+  for (let i = Math.ceil(vb.y * 10 / step) * step; i <= vb.y * 10 + vb.h * 10; i += step) {
+    const major = i % 10 === 0;
+    el("line", { x1: vb.x, y1: i / 10, x2: vb.x + vb.w, y2: i / 10,
+      stroke: i === 0 ? C.axis : major ? C.major : C.minor, "stroke-width": px }, grid);
+  }
+
+  // ruler labels along the center axes, in plain words (L/R, F/B)
+  const W = values.CHASSIS_WIDTH_IN, L = values.CHASSIS_LENGTH_IN;
+  const nearSideLabel = i => Math.abs(Math.abs(i) - (W / 2 + 0.4)) < 0.8;
+  const nearEndLabel = i => Math.abs(i - (-L / 2 - 1.0)) < 0.9 || Math.abs(i - (L / 2 + 0.8)) < 0.8;
+  const every = view.scale >= 28 ? 1 : view.scale >= 14 ? 2 : 5;
+  const labels = el("g", { fill: css("--muted"), "font-size": font, "font-family": "system-ui, sans-serif" }, svg);
+  for (let i = Math.ceil(vb.x / every) * every; i <= vb.x + vb.w; i += every) {
+    if (i === 0 || nearSideLabel(i)) continue;
+    const t = el("text", { x: i, y: 13 * px, "text-anchor": "middle" }, labels);
+    t.textContent = Math.abs(i) + (i < 0 ? "L" : "R");
+  }
+  for (let i = Math.ceil(vb.y / every) * every; i <= vb.y + vb.h; i += every) {
+    if (i === 0 || nearEndLabel(i)) continue;
+    const t = el("text", { x: 4 * px, y: i + 4 * px }, labels);
+    t.textContent = Math.abs(i) + (i < 0 ? "F" : "B");
+  }
+
+  // chassis
+  el("rect", { x: -W / 2, y: -L / 2, width: W, height: L, fill: css("--chassis-fill"),
+    stroke: css("--chassis-line"), "stroke-width": 2 * px, rx: 0.15 }, svg);
+  const ink = css("--chassis-line");
+  el("path", { d: `M ${-0.6} ${-L / 2 - 0.35} L 0 ${-L / 2 - 1.0} L 0.6 ${-L / 2 - 0.35} Z`, fill: ink }, svg);
+  const front = el("text", { x: 0, y: -L / 2 - 1.25, "text-anchor": "middle", fill: ink,
+    "font-size": 13 * px, "font-weight": 700, "font-family": "system-ui, sans-serif" }, svg);
+  front.textContent = "FRONT (intake)";
+  for (const [x, y, s] of [[-W / 2 - 0.4, 0, "LEFT"], [W / 2 + 0.4, 0, "RIGHT"], [0, L / 2 + 0.8, "BACK"]]) {
+    const t = el("text", { x, y, "text-anchor": "middle", fill: css("--muted"), "font-size": font,
+      "font-family": "system-ui, sans-serif", "font-weight": 600,
+      transform: s === "BACK" ? "" : `rotate(${s === "LEFT" ? -90 : 90} ${x} ${y})` }, svg);
+    t.textContent = s;
+  }
+  // center
+  el("circle", { cx: 0, cy: 0, r: 0.12, fill: "none", stroke: ink, "stroke-width": 1.5 * px }, svg);
+  el("line", { x1: -0.35, y1: 0, x2: 0.35, y2: 0, stroke: ink, "stroke-width": 1.5 * px }, svg);
+  el("line", { x1: 0, y1: -0.35, x2: 0, y2: 0.35, stroke: ink, "stroke-width": 1.5 * px }, svg);
+
+  // pods (selected one last so it draws on top)
+  for (const pod of [...PODS].sort((a, b) => (a.key === selected) - (b.key === selected))) drawPod(pod, px, font);
+}
+
+function drawPod(pod, px, font) {
+  const p = podVals(pod.key);
+  const color = css(pod.color);
+  const isSel = pod.key === selected;
+  const g = el("g", { transform: `translate(${-p.left} ${-p.fwd})`, "data-pod": pod.key, style: "cursor: move" }, svg);
+  el("circle", { r: 1.0, fill: "transparent" }, g);   // easy-to-grab hit area
+  if (isSel) el("circle", { r: 0.95, fill: "none", stroke: color, "stroke-width": 1.5 * px, "stroke-dasharray": `${4 * px} ${3 * px}` }, g);
+  const r = el("g", { transform: `rotate(${-p.arrow})` }, g);   // arrow drawn pointing at the front, then turned
+  el("rect", { x: -WHEEL_W / 2, y: -WHEEL_LEN / 2, width: WHEEL_W, height: WHEEL_LEN, rx: 0.12,
+    fill: color, "fill-opacity": 0.25, stroke: color, "stroke-width": 2 * px }, r);
+  el("line", { x1: 0, y1: 0, x2: 0, y2: -1.45, stroke: color, "stroke-width": 2.5 * px }, r);
+  el("path", { d: "M -0.22 -1.25 L 0 -1.7 L 0.22 -1.25 Z", fill: color }, r);
+  el("circle", { r: 0.07, fill: color, stroke: css("--panel"), "stroke-width": 1.5 * px }, g);
+  const t = el("text", { x: 0.35, y: 0.95, fill: color, "font-size": font, "font-weight": 700,
+    "font-family": "system-ui, sans-serif" }, g);
+  t.textContent = pod.key === "PORT0" ? "P0" : "P3";
+}
+
+// ---------------- side panel ----------------
+function plainFwd(v) { return v === 0 ? "on the left-right center line" : `${fmt(Math.abs(v))} in ${v > 0 ? "ahead of" : "behind"} center`; }
+function plainLeft(v) { return v === 0 ? "on the front-back center line" : `${fmt(Math.abs(v))} in ${v > 0 ? "left" : "right"} of center`; }
+
+function buildSide() {
+  const side = document.getElementById("side");
+  side.textContent = "";
+  for (const pod of PODS) {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.dataset.pod = pod.key;
+    card.style.setProperty("--sel", `var(${pod.color})`);
+    card.innerHTML = `
+      <h2><span class="swatch"></span>${pod.title} <span style="color:var(--muted);font-weight:500">(${pod.key === "PORT0" ? "P0" : "P3"})</span></h2>
+      <div class="role" data-role></div>
+      <div class="row"><label for="${pod.key}-fwd">Forward of center (in)</label><input type="number" step="0.05" id="${pod.key}-fwd" data-part="fwd"><div class="plain" data-plain="fwd"></div></div>
+      <div class="row"><label for="${pod.key}-left">Left of center (in)</label><input type="number" step="0.05" id="${pod.key}-left" data-part="left"><div class="plain" data-plain="left"></div></div>
+      <div class="arrows-label">Raw count goes <b>up</b> when the robot moves:</div>
+      <div class="compass">
+        <span></span><button data-arrow="0">front</button><span></span>
+        <button data-arrow="90">left</button><span class="c">robot</span><button data-arrow="270">right</button>
+        <span></span><button data-arrow="180">back</button><span></span>
+      </div>`;
+    card.addEventListener("pointerdown", () => { if (selected !== pod.key) { selected = pod.key; update(); } });
+    for (const input of card.querySelectorAll("input")) {
+      input.addEventListener("input", () => {
+        const v = parseFloat(input.value);
+        const ok = input.value.trim() !== "" && isFinite(v) && Math.abs(v) <= 36;
+        input.classList.toggle("invalid", !ok);
+        if (ok) setPod(pod.key, input.dataset.part, v);
+      });
+      input.addEventListener("blur", () => { input.classList.remove("invalid"); syncSide(); });
+    }
+    for (const b of card.querySelectorAll("[data-arrow]")) {
+      b.addEventListener("click", () => setPod(pod.key, "arrow", Number(b.dataset.arrow)));
+    }
+    side.appendChild(card);
+  }
+
+  const summary = document.createElement("div");
+  summary.className = "card";
+  summary.innerHTML = `
+    <h2>Check on the robot</h2>
+    <div class="err" id="layoutErr"></div>
+    <p class="expect" id="expect"></p>`;
+  side.appendChild(summary);
+
+  const chassis = document.createElement("div");
+  chassis.className = "card";
+  chassis.innerHTML = `
+    <h2>Chassis (drawing only)</h2>
+    <div class="row"><label for="cw">Width, left to right (in)</label><input type="number" step="0.0625" id="cw" data-c="CHASSIS_WIDTH_IN"></div>
+    <div class="row"><label for="cl">Length, front to back (in)</label><input type="number" step="0.0625" id="cl" data-c="CHASSIS_LENGTH_IN"></div>`;
+  for (const input of chassis.querySelectorAll("input")) {
+    input.addEventListener("input", () => {
+      const v = parseFloat(input.value);
+      const ok = isFinite(v) && v > 0 && v <= 36;
+      input.classList.toggle("invalid", !ok);
+      if (ok) { values[input.dataset.c] = clean(v); update(); }
+    });
+    input.addEventListener("blur", () => { input.classList.remove("invalid"); syncSide(); });
+  }
+  side.appendChild(chassis);
+
+  const help = document.createElement("details");
+  help.className = "card";
+  help.innerHTML = `
+    <summary>How to use</summary>
+    <ol>
+      <li>Measure each pod's <b>wheel contact point</b> from the robot's center of rotation and place its dot there.</li>
+      <li>Run <b>Odometry Check</b> on the robot. Push the robot by hand and watch each pod's RAW count. Point that pod's arrow the way you pushed to make its count go <b>up</b>. That one choice sets both which way the wheel rolls and the encoder sign.</li>
+      <li>Save, then Build &amp; deploy in Android Studio. Nothing reaches the robot until you deploy.</li>
+      <li>Confirm with Tuning → Localization → Offsets Tuner (set both offsets to 0 first). Its numbers should match the ones above.</li>
+    </ol>
+    <p>Keys: <kbd>R</kbd> / <kbd>Shift</kbd>+<kbd>R</kbd> rotate, arrow keys nudge 0.1 in (<kbd>Shift</kbd> 0.01), <kbd>Tab</kbd> switch pod, <kbd>Ctrl</kbd>+<kbd>S</kbd> save.</p>`;
+  side.appendChild(help);
+}
+
+function syncSide() {
+  for (const pod of PODS) {
+    const card = document.querySelector(`.card[data-pod=${pod.key}]`);
+    const p = podVals(pod.key);
+    card.classList.toggle("selected", pod.key === selected);
+    for (const input of card.querySelectorAll("input")) {
+      if (document.activeElement !== input) input.value = fmt(p[input.dataset.part], 4);
+    }
+    card.querySelector("[data-plain=fwd]").textContent = plainFwd(p.fwd);
+    card.querySelector("[data-plain=left]").textContent = plainLeft(p.left);
+    card.querySelector("[data-role]").textContent = rollsForward(p.arrow)
+      ? "Forward pod: wheel rolls front ↔ back"
+      : "Strafe pod: wheel rolls side ↔ side";
+    for (const b of card.querySelectorAll("[data-arrow]")) b.setAttribute("aria-pressed", String(Number(b.dataset.arrow) === p.arrow));
+  }
+  for (const input of document.querySelectorAll("input[data-c]")) {
+    if (document.activeElement !== input) input.value = fmt(values[input.dataset.c], 4);
+  }
+  const err = layoutError();
+  document.getElementById("layoutErr").textContent = err || "";
+  const e = expectedTuner();
+  const sign = v => (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v));
+  document.getElementById("expect").innerHTML = err ? "" :
+    `Offsets Tuner should print about <code>forwardY ${sign(e.forwardY)}</code> and <code>strafeX ${sign(e.strafeX)}</code>. ` +
+    `If it disagrees, trust the tuner and tell the programmers. The sign rule lives in <code>OdometryPods.java</code>.`;
+}
+
+function setStatus(kind, text) {
+  const s = document.getElementById("status");
+  s.className = "status " + kind;
+  document.getElementById("statusText").textContent = text;
+}
+
+function update() {
+  draw();
+  syncSide();
+  const dirty = isDirty(), err = layoutError();
+  document.getElementById("save").disabled = !dirty || !!err || serverDown;
+  document.getElementById("revert").disabled = !dirty;
+  if (serverDown) setStatus("error", "Tool server stopped");
+  else if (diskChanged) setStatus("error", "File changed on disk");
+  else if (dirty) setStatus("dirty", "Unsaved changes");
+  else setStatus("", "Saved");
+}
+
+// ---------------- banner ----------------
+function banner(kind, msg, buttons) {
+  const b = document.getElementById("banner");
+  if (!msg) { b.className = ""; return; }
+  b.className = "show " + kind;
+  document.getElementById("bannerMsg").textContent = msg;
+  const box = document.getElementById("bannerButtons");
+  box.textContent = "";
+  for (const [label, fn, primary] of buttons || []) {
+    const btn = document.createElement("button");
+    btn.textContent = label;
+    if (primary) btn.className = "primary";
+    btn.style.marginLeft = "6px";
+    btn.onclick = fn;
+    box.appendChild(btn);
+  }
+}
+
+// ---------------- server I/O ----------------
+async function load() {
+  const res = await fetch("/api/geometry", { cache: "no-store" });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error || res.statusText);
+  saved = body.values;
+  values = structuredClone(saved);
+  baseHash = body.hash;
+  diskChanged = false;
+  document.getElementById("file").textContent = body.file;
+  banner();
+  update();
+}
+
+async function save(force) {
+  if (!isDirty() || layoutError()) return;
+  setStatus("dirty", "Saving…");
+  saving = true;
+  let res, body;
+  try {
+    res = await fetch("/api/geometry", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ values, baseHash, force: !!force }),
+    });
+    body = await res.json();
+  } catch (e) {
+    saving = false;
+    serverDown = true; update();
+    banner("bad", "Couldn't reach the tool server, so nothing was saved. Start it again with: python tools/pod-placer/server.py");
+    return;
+  }
+  saving = false;
+  if (res.status === 409) {
+    diskChanged = true; update();
+    banner("warn", "OdometryGeometry.java was changed outside this tool (Android Studio, git pull…) after you opened it. Nothing was saved.", [
+      ["Load the file's version (discard my edits)", () => load()],
+      ["Overwrite it with mine", () => save(true), true],
+    ]);
+    return;
+  }
+  if (!res.ok) { update(); banner("bad", "Save failed: " + body.error); return; }
+  saved = body.values;
+  values = structuredClone(saved);
+  baseHash = body.hash;
+  diskChanged = false;
+  banner();
+  update();
+}
+
+// Watch for edits made outside the tool. With no unsaved edits here, just
+// pick them up; with unsaved edits, warn instead of touching anything.
+async function poll() {
+  if (saving) return;
+  try {
+    const res = await fetch("/api/geometry", { cache: "no-store" });
+    const body = await res.json();
+    if (serverDown) { serverDown = false; banner(); update(); }
+    if (res.ok && body.hash !== baseHash && !diskChanged) {
+      if (!isDirty()) {
+        await load();
+      } else {
+        diskChanged = true; update();
+        banner("warn", "OdometryGeometry.java changed on disk while you have unsaved edits here.", [
+          ["Load the file's version (discard my edits)", () => load()],
+          ["Keep editing (Save will ask before overwriting)", () => banner()],
+        ]);
+      }
+    }
+  } catch (e) {
+    if (!serverDown) { serverDown = true; update(); }
+  }
+}
+
+// ---------------- interaction ----------------
+function toInches(clientX, clientY) {
+  const vb = viewBox();
+  return { x: vb.x + (clientX - vb.r.left) / view.scale, y: vb.y + (clientY - vb.r.top) / view.scale };
+}
+
+let drag = null;
+svg.addEventListener("pointerdown", e => {
+  const podEl = e.target.closest("[data-pod]");
+  svg.setPointerCapture(e.pointerId);
+  const pt = toInches(e.clientX, e.clientY);
+  if (podEl) {
+    selected = podEl.dataset.pod;
+    const p = podVals(selected);
+    drag = { kind: "pod", dx: pt.x - -p.left, dy: pt.y - -p.fwd };
+    update();
+  } else {
+    drag = { kind: "pan", x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy };
+    svg.classList.add("panning");
+  }
+});
+svg.addEventListener("pointermove", e => {
+  if (!drag) return;
+  if (drag.kind === "pan") {
+    view.cx = drag.cx - (e.clientX - drag.x) / view.scale;
+    view.cy = drag.cy - (e.clientY - drag.y) / view.scale;
+    draw();
+  } else {
+    const pt = toInches(e.clientX, e.clientY);
+    const step = e.shiftKey ? 0.01 : 0.1;
+    values[selected + "_POD_LEFT_IN"] = clean(round(-(pt.x - drag.dx), step));
+    values[selected + "_POD_FORWARD_IN"] = clean(round(-(pt.y - drag.dy), step));
+    update();
+  }
+});
+const endDrag = () => { drag = null; svg.classList.remove("panning"); };
+svg.addEventListener("pointerup", endDrag);
+svg.addEventListener("pointercancel", endDrag);
+
+function zoomAt(factor, clientX, clientY) {
+  const before = toInches(clientX, clientY);
+  view.scale = Math.min(400, Math.max(6, view.scale * factor));
+  const after = toInches(clientX, clientY);
+  view.cx += before.x - after.x;
+  view.cy += before.y - after.y;
+  draw();
+}
+svg.addEventListener("wheel", e => { e.preventDefault(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY); }, { passive: false });
+const center = () => { const r = svg.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+document.getElementById("zoomIn").onclick = () => zoomAt(1.4, ...center());
+document.getElementById("zoomOut").onclick = () => zoomAt(1 / 1.4, ...center());
+function fit() {
+  if (!values) return;
+  const r = svg.getBoundingClientRect();
+  const w = values.CHASSIS_WIDTH_IN + 6, h = values.CHASSIS_LENGTH_IN + 6;
+  view.scale = Math.max(6, Math.min(r.width / w, r.height / h));
+  view.cx = 0; view.cy = 0;
+  draw();
+}
+document.getElementById("zoomFit").onclick = fit;
+window.addEventListener("resize", draw);
+
+document.getElementById("save").onclick = () => save(false);
+document.getElementById("revert").onclick = () => load().catch(e => banner("bad", "Couldn't reload: " + e.message));
+
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); save(false); return; }
+  if (e.target.tagName === "INPUT" || !values) return;
+  const p = podVals(selected);
+  const step = e.shiftKey ? 0.01 : 0.1;
+  if (e.key === "r" || e.key === "R") setPod(selected, "arrow", (p.arrow + (e.shiftKey ? 270 : 90)) % 360);
+  else if (e.key === "ArrowUp") setPod(selected, "fwd", p.fwd + step);
+  else if (e.key === "ArrowDown") setPod(selected, "fwd", p.fwd - step);
+  else if (e.key === "ArrowLeft") setPod(selected, "left", p.left + step);
+  else if (e.key === "ArrowRight") setPod(selected, "left", p.left - step);
+  else if (e.key === "Tab") { selected = selected === "PORT0" ? "PORT3" : "PORT0"; update(); }
+  else return;
+  e.preventDefault();
+});
+
+window.addEventListener("beforeunload", e => { if (isDirty()) { e.preventDefault(); e.returnValue = ""; } });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+
+buildSide();
+load().then(fit).catch(e => banner("bad", "Couldn't read OdometryGeometry.java: " + e.message));
+setInterval(poll, 2000);
+</script>
+</body>
+</html>

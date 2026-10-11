@@ -17,10 +17,12 @@ import org.firstinspires.ftc.teamcode.subsystems.RobotHardware;
  * number instead of as a mysteriously drifting pose.
  *
  * Push the robot BY HAND (motors are off unless a button is held):
- *   push forward  -> forward pod inches go UP
- *   push left     -> strafe pod inches go UP
- *   turn left/CCW -> heading goes UP
- * If any go the wrong way, flip the matching value in HardwareConfig.
+ *   1. RAW counts: whichever way you push the robot to make a pod's raw
+ *      count go UP is the arrow to set for it in the Pod Placer.
+ *   2. After saving the Pod Placer and redeploying, the forward/strafe
+ *      readouts should go UP when pushed forward / left.
+ *   3. Turn left (counter-clockwise) -> heading goes UP. If not, fix
+ *      HUB_LOGO / HUB_USB in HardwareConfig.
  *
  * Motor spin test (hold to run at low power; every wheel should roll the
  * robot FORWARD — put it on a block first):
@@ -33,17 +35,17 @@ public class OdometryCheck extends OpMode {
     private static final double SPIN_TEST_POWER = 0.3;
 
     private RobotHardware hardware;
-    private DcMotor forwardPod, strafePod;
+    private DcMotor pod0, pod3;
     private IMU imu;
-    private int forwardZero, strafeZero;
+    private int zero0, zero3;
 
     @Override
     public void init() {
         hardware = new RobotHardware();
         hardware.init(hardwareMap);
 
-        forwardPod = hardwareMap.get(DcMotor.class, HardwareConfig.FORWARD_POD);
-        strafePod = hardwareMap.get(DcMotor.class, HardwareConfig.STRAFE_POD);
+        pod0 = hardwareMap.get(DcMotor.class, HardwareConfig.POD_PORT0);
+        pod3 = hardwareMap.get(DcMotor.class, HardwareConfig.POD_PORT3);
 
         imu = hardwareMap.get(IMU.class, HardwareConfig.IMU);
         imu.initialize(new IMU.Parameters(
@@ -61,25 +63,32 @@ public class OdometryCheck extends OpMode {
         hardware.backLeft.setPower(gamepad1.a ? SPIN_TEST_POWER : 0);
         hardware.backRight.setPower(gamepad1.b ? SPIN_TEST_POWER : 0);
 
-        // getCurrentPosition() ignores the motor's setDirection(), so the pod
-        // sign is applied here exactly the way Pedro's Encoder applies it.
-        int forwardTicks = (int) ((forwardPod.getCurrentPosition() - forwardZero) * HardwareConfig.FORWARD_POD_DIR);
-        int strafeTicks = (int) ((strafePod.getCurrentPosition() - strafeZero) * HardwareConfig.STRAFE_POD_DIR);
+        // getCurrentPosition() ignores the motor's setDirection(), so these
+        // are the pods' true raw counts.
+        int raw0 = pod0.getCurrentPosition() - zero0;
+        int raw3 = pod3.getCurrentPosition() - zero3;
 
-        telemetry.addLine("Push forward / left / turn CCW: all should go UP");
-        telemetry.addData("Forward pod (" + HardwareConfig.FORWARD_POD + ")", "%d ticks  %.2f in",
-                forwardTicks, forwardTicks * HardwareConfig.POD_INCHES_PER_TICK);
-        telemetry.addData("Strafe pod (" + HardwareConfig.STRAFE_POD + ")", "%d ticks  %.2f in",
-                strafeTicks, strafeTicks * HardwareConfig.POD_INCHES_PER_TICK);
-        telemetry.addData("Heading", "%.1f deg", imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES));
+        // Same direction flip Pedro's Encoder applies.
+        boolean port3IsForward = HardwareConfig.FORWARD_POD.equals(HardwareConfig.POD_PORT3);
+        double forwardTicks = (port3IsForward ? raw3 : raw0) * HardwareConfig.FORWARD_POD_DIR;
+        double strafeTicks = (port3IsForward ? raw0 : raw3) * HardwareConfig.STRAFE_POD_DIR;
+
+        telemetry.addLine("RAW (set Pod Placer arrows from these)");
+        telemetry.addData("  port 0 pod (" + HardwareConfig.POD_PORT0 + ")", raw0);
+        telemetry.addData("  port 3 pod (" + HardwareConfig.POD_PORT3 + ")", raw3);
+        telemetry.addLine();
+        telemetry.addLine("AS PEDRO SEES IT (push fwd / left / turn CCW: all UP)");
+        telemetry.addData("  forward pod", "%.2f in", forwardTicks * HardwareConfig.POD_INCHES_PER_TICK);
+        telemetry.addData("  strafe pod", "%.2f in", strafeTicks * HardwareConfig.POD_INCHES_PER_TICK);
+        telemetry.addData("  heading", "%.1f deg", imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES));
         telemetry.addLine();
         telemetry.addLine("Hold X/Y/A/B: LF / RF / LR / RR forward  |  Back: zero");
         telemetry.update();
     }
 
     private void zero() {
-        forwardZero = forwardPod.getCurrentPosition();
-        strafeZero = strafePod.getCurrentPosition();
+        zero0 = pod0.getCurrentPosition();
+        zero3 = pod3.getCurrentPosition();
         imu.resetYaw();
     }
 }
