@@ -70,6 +70,7 @@ a PR as they're done.
 - [ ] Tip confirmation sees the tags from the shot spot
 - [ ] Full run, red and blue: tip 1 reliably; count how many balls tip 2 gets
 - [ ] TeleOp after Auto continues from Auto's pose and HIVE state
+- [ ] Partner Planner: Send to robot works; the plan shows up in Auto INIT's partner page
 - [ ] Partner page: grid matches what the drive team sees from both walls (red and blue)
 - [ ] With a tile marked, Auto skips balls there and doesn't drive through it
 

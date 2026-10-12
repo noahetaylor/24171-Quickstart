@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Partner Planner</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #16181d; --muted: #5d6573; --line: #d9dde3;
+    --tile: #eceef2; --tile-line: #d3d8df; --frame: #9aa3b1;
+    --red: #dc2626; --blue: #2563eb; --zone: #c2410c; --zone-fill: rgba(194, 65, 12, 0.28);
+    --zone-off: rgba(194, 65, 12, 0.07); --sel: #16181d; --ours: rgba(22, 128, 61, 0.06);
+    --accent: #16181d; --accent-ink: #ffffff;
+    --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --warn-bg: #fff7ed; --bad-bg: #fef2f2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111317; --panel: #1a1d23; --ink: #e8eaee; --muted: #9aa3b1; --line: #2c313a;
+      --tile: #1d2027; --tile-line: #2c313a; --frame: #5d6573;
+      --red: #f87171; --blue: #60a5fa; --zone: #fb923c; --zone-fill: rgba(251, 146, 60, 0.30);
+      --zone-off: rgba(251, 146, 60, 0.08); --sel: #e8eaee; --ours: rgba(74, 222, 128, 0.06);
+      --accent: #e8eaee; --accent-ink: #111317;
+      --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --warn-bg: #2a2112; --bad-bg: #2a1515;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: grid; grid-template-rows: auto auto 1fr; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 650; }
+  header .spacer { flex: 1; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+  .status.dirty .dot { background: var(--warn); }
+  button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.small { padding: 2px 8px; font-size: 12px; }
+  button[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  #banner { display: none; padding: 10px 16px; gap: 12px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+  #banner.show { display: flex; }
+  #banner.warn { background: var(--warn-bg); }
+  #banner.bad { background: var(--bad-bg); }
+  #banner .msg { flex: 1; min-width: 240px; white-space: pre-wrap; }
+  main { display: grid; grid-template-columns: 1fr 370px; min-height: 0; }
+  #stage { min-width: 0; min-height: 0; display: grid; grid-template-rows: 1fr auto; }
+  svg { display: block; width: 100%; height: 100%; user-select: none; touch-action: none; }
+  .scrub { display: flex; gap: 10px; align-items: center; padding: 8px 16px; border-top: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+  .scrub input[type=range] { flex: 1; min-width: 160px; }
+  aside { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .card h2 { font-size: 14px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+  .card h2 .spacer { flex: 1; }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+  .muted { color: var(--muted); font-size: 12px; }
+  input[type=text], input[type=number], select { font: inherit; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+  input[type=text] { width: 100%; }
+  input[type=number] { width: 64px; text-align: right; }
+  select { width: 100%; }
+  .zone { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 6px; cursor: pointer; }
+  .zone.sel { background: color-mix(in srgb, var(--zone) 18%, transparent); }
+  .zone .t { display: flex; gap: 4px; align-items: center; font-size: 12px; }
+  details summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+  details li { font-size: 12px; color: var(--muted); }
+  kbd { font: 11px ui-monospace, Consolas, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+  @media (max-width: 860px) { body { overflow: auto; } main { grid-template-columns: 1fr; grid-template-rows: 70vh auto; } aside { border-left: 0; border-top: 1px solid var(--line); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Partner Planner</h1>
+  <span class="muted" id="dir"></span>
+  <span class="spacer"></span>
+  <span class="status" id="status"><span class="dot"></span><span id="statusText">Loading</span></span>
+  <button id="push" title="Copy every saved plan to the robot (laptop on the robot's Wi-Fi, or USB). Not during a match.">Send to robot</button>
+  <button id="save" class="primary" disabled title="Save this plan (Ctrl+S)">Save</button>
+</header>
+<div id="banner"><span class="msg" id="bannerMsg"></span><span id="bannerButtons"></span></div>
+<main>
+  <div id="stage">
+    <svg id="svg" viewBox="-10 -12 164 168" aria-label="Field seen from the audience; drag on our half to draw a zone"></svg>
+    <div class="scrub">
+      <label><input type="checkbox" id="allTimes" checked> show all times</label>
+      <input type="range" id="time" min="0" max="30" step="0.5" value="0" disabled>
+      <span id="timeLabel" class="muted">t = 0 s</span>
+    </div>
+  </div>
+  <aside id="side"></aside>
+</main>
+
+<script>
+"use strict";
+const NS = "http://www.w3.org/2000/svg";
+const F = 144, MID = 72, TILE = 24;
+// Field landmarks (Pedro inches, mirrors TeamCode field/Field.java).
+const HIVE_X = 12, CELL_HALF_SPACING = 9.4, CELL_W = 20, CELL_D = 12;
+const FRAME_W = 49.46, FRAME_D = 38.95;
+const FLOWERS = [[48, 141], [96, 3], [3, 48], [141, 96]];
+const RED_LZ = [0, 96, 11, 120], RED_GARDEN = [0, 0, 24, 2];
+
+const state = {
+  alliance: (() => { try { return localStorage.getItem("pp-alliance") || "RED"; } catch (e) { return "RED"; } })(),
+  plans: [], dir: "",
+  cur: null,            // {file, name, zones (RED frame), hash}
+  saved: null,          // JSON of cur as last saved/loaded
+  sel: -1,
+  allTimes: true, t: 0,
+  window: [0, 30],      // time window for new zones
+};
+const $ = (id) => document.getElementById(id);
+const svg = $("svg");
+
+// ----------------------------------------------------------- frames
+// Zones are stored for RED; when we're BLUE they're shown rotated 180 deg.
+const rot = (z) => [F - z[2], F - z[3], F - z[0], F - z[1], z[4], z[5]];
+const toView = (z) => state.alliance === "RED" ? z.slice() : rot(z);
+const fromView = (z) => state.alliance === "RED" ? z.slice() : rot(z);
+const ourHalf = () => state.alliance === "RED" ? [0, MID] : [MID, F];
+
+// SVG y is down; the field's y is up (audience at the bottom).
+const Y = (y) => F - y;
+
+// ----------------------------------------------------------- server
+async function api(path, body) {
+  const opts = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const res = await fetch(path, opts);
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* empty */ }
+  return { status: res.status, data };
+}
+
+async function loadPlans(selectFile) {
+  const { status, data } = await api("/api/plans");
+  if (status !== 200) { banner("bad", data.error || "Could not read plans"); return; }
+  state.plans = data.plans;
+  state.dir = data.dir;
+  $("dir").textContent = data.dir;
+  const pick = state.plans.find((p) => p.file === selectFile) || state.plans[0];
+  if (pick) open(pick); else newPlan();
+}
+
+function open(p) {
+  state.cur = { file: p.file, name: p.name, zones: p.zones.map((z) => z.slice()), hash: p.hash };
+  state.saved = JSON.stringify(state.cur);
+  state.sel = -1;
+  render();
+}
+
+function newPlan() {
+  state.cur = { file: null, name: "", zones: [], hash: null };
+  state.saved = null;
+  state.sel = -1;
+  render();
+}
+
+const dirty = () => JSON.stringify(state.cur) !== state.saved;
+
+async function save(force) {
+  const c = state.cur;
+  const { status, data } = await api("/api/save", { file: c.file, name: c.name, zones: c.zones, baseHash: c.hash, force: !!force });
+  if (status === 200) {
+    hideBanner();
+    await loadPlans(data.file);
+    setStatus("", "Saved. Send to robot when ready.");
+  } else if (status === 409) {
+    banner("warn", data.error, [["Cancel", hideBanner], ["Overwrite", () => save(true), true]]);
+  } else {
+    banner("bad", "Not saved: " + (data.error || status), [["OK", hideBanner]]);
+  }
+}
+
+// ----------------------------------------------------------- UI helpers
+function setStatus(kind, text) { $("status").className = "status " + kind; $("statusText").textContent = text; }
+function banner(kind, msg, buttons) {
+  $("banner").className = "show " + kind;
+  $("bannerMsg").textContent = msg;
+  const box = $("bannerButtons");
+  box.innerHTML = "";
+  (buttons || []).forEach(([label, fn, primary]) => {
+    const b = document.createElement("button");
+    b.textContent = label;
+    if (primary) b.className = "primary";
+    b.onclick = fn;
+    box.appendChild(b);
+  });
+}
+function hideBanner() { $("banner").className = ""; }
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  (parent || svg).appendChild(e);
+  return e;
+}
+const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const active = (z) => state.allTimes || (state.t >= z[4] - 1e-9 && state.t < z[5]);
+const fmtT = (v) => (Math.round(v * 2) / 2).toString();
+
+// ----------------------------------------------------------- render
+function render() {
+  const d = dirty();
+  setStatus(d ? "dirty" : "", d ? "Unsaved changes" : "Saved");
+  $("save").disabled = !d || !state.cur.name.trim();
+  renderField();
+  renderSide();
+}
+
+function rect(x0, y0, x1, y1, attrs) {
+  return el("rect", Object.assign({ x: Math.min(x0, x1), y: Y(Math.max(y0, y1)), width: Math.abs(x1 - x0), height: Math.abs(y1 - y0) }, attrs));
+}
+
+function renderField() {
+  svg.innerHTML = "";
+  // tiles
+  for (let c = 0; c < 6; c++) for (let r = 0; r < 6; r++) rect(c * TILE, r * TILE, (c + 1) * TILE, (r + 1) * TILE, { fill: css("--tile"), stroke: css("--tile-line"), "stroke-width": 0.4 });
+  const [h0, h1] = ourHalf();
+  rect(h0, 0, h1, F, { fill: css("--ours") });
+  el("line", { x1: MID, x2: MID, y1: 0, y2: F, stroke: css("--frame"), "stroke-width": 0.6, "stroke-dasharray": "2 2" });
+  // walls / labels
+  rect(0, 0, F, F, { fill: "none", stroke: css("--ink"), "stroke-width": 1 });
+  el("text", { x: MID, y: F + 9, "text-anchor": "middle", "font-size": 5, fill: css("--muted") }).textContent = "AUDIENCE";
+  el("text", { x: MID, y: -4, "text-anchor": "middle", "font-size": 5, fill: css("--muted") }).textContent = "far wall";
+  el("rect", { x: -6, y: 0, width: 4, height: F, fill: css("--red") });
+  el("rect", { x: F + 2, y: 0, width: 4, height: F, fill: css("--blue") });
+  // loading zones + gardens (red, and blue rotated)
+  for (const [z, col] of [[RED_LZ, "--red"], [[F - RED_LZ[2], F - RED_LZ[3], F - RED_LZ[0], F - RED_LZ[1]], "--blue"]]) {
+    rect(z[0], z[1], z[2], z[3], { fill: "none", stroke: css(col), "stroke-width": 0.8 });
+  }
+  for (const [z, col] of [[RED_GARDEN, "--red"], [[F - 24, F - 2, F, F], "--blue"]]) {
+    rect(z[0], z[1], z[2], z[3], { fill: css(col), opacity: 0.6 });
+  }
+  // HIVE frame + cells (up/down doesn't matter for planning)
+  rect(MID - FRAME_W / 2, MID - FRAME_D / 2, MID + FRAME_W / 2, MID + FRAME_D / 2, { fill: "none", stroke: css("--frame"), "stroke-width": 0.8 });
+  for (const [hx, col] of [[MID - HIVE_X, "--red"], [MID + HIVE_X, "--blue"]]) {
+    for (const s of [-1, 1]) {
+      const cy = MID + s * CELL_HALF_SPACING;
+      rect(hx - CELL_W / 2, cy - CELL_D / 2, hx + CELL_W / 2, cy + CELL_D / 2, { fill: css(col), opacity: 0.25, stroke: css(col), "stroke-width": 0.6 });
+    }
+  }
+  for (const [fx, fy] of FLOWERS) el("circle", { cx: fx, cy: Y(fy), r: 3, fill: "none", stroke: css("--ok"), "stroke-width": 1 });
+
+  // zones
+  state.cur.zones.forEach((zr, i) => {
+    const z = toView(zr);
+    const on = active(zr);
+    const r = rect(z[0], z[1], z[2], z[3], {
+      fill: on ? css("--zone-fill") : css("--zone-off"),
+      stroke: i === state.sel ? css("--sel") : css("--zone"), "stroke-width": i === state.sel ? 1.2 : 0.8,
+      "stroke-dasharray": on ? "" : "2 2", style: "cursor:move",
+    });
+    r.addEventListener("pointerdown", (e) => startMove(e, i));
+    el("text", { x: (z[0] + z[2]) / 2, y: Y((z[1] + z[3]) / 2) + 2, "text-anchor": "middle", "font-size": 4.5, fill: css("--ink"), "pointer-events": "none" })
+      .textContent = fmtT(zr[4]) + "–" + fmtT(zr[5]) + "s";
+    if (i === state.sel) {
+      const hdl = el("rect", { x: z[2] - 2, y: Y(z[1]) - 2, width: 4, height: 4, fill: css("--sel"), style: "cursor:nwse-resize" });
+      hdl.addEventListener("pointerdown", (e) => startResize(e, i));
+    }
+  });
+  if (drag && drag.kind === "draw") {
+    rect(drag.x0, drag.y0, drag.x1, drag.y1, { fill: css("--zone-fill"), stroke: css("--zone"), "stroke-dasharray": "3 2" });
+  }
+}
+
+function renderSide() {
+  const side = $("side");
+  const c = state.cur;
+  side.innerHTML = `
+    <div class="card">
+      <h2>We are</h2>
+      <div class="row">
+        <button id="aRed" aria-pressed="${state.alliance === "RED"}">RED</button>
+        <button id="aBlue" aria-pressed="${state.alliance === "BLUE"}">BLUE</button>
+        <span class="muted">Draw on our half (shaded). Plans work for either alliance.</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Plan <span class="spacer"></span><button class="small" id="new">New</button><button class="small" id="dup" ${c.file ? "" : "disabled"}>Duplicate</button><button class="small" id="del" ${c.file ? "" : "disabled"}>Delete</button></h2>
+      <select id="pick">${state.plans.map((p) => `<option value="${p.file}" ${p.file === c.file ? "selected" : ""}></option>`).join("")}
+        ${c.file ? "" : '<option selected>(new, unsaved)</option>'}</select>
+      <div class="row"><input type="text" id="name" placeholder="Partner team + what they do, e.g. 14250 left push" maxlength="60"></div>
+    </div>
+    <div class="card">
+      <h2>Zones <span class="spacer"></span><span class="muted">${c.zones.length}</span></h2>
+      <div class="row muted">New zones use:
+        ${[[0, 30, "whole"], [0, 10, "0–10"], [10, 20, "10–20"], [20, 30, "20–30"]].map(([a, b, l]) =>
+          `<button class="small win" data-a="${a}" data-b="${b}" aria-pressed="${state.window[0] === a && state.window[1] === b}">${l}</button>`).join("")}
+      </div>
+      <div id="zones"></div>
+      <p class="muted">${c.zones.length ? "Click a zone to select it; drag to move, corner handle to resize, Delete to remove." : "Drag on our half of the field to draw where the partner's robot goes."}</p>
+    </div>
+    <details class="card"><summary>How it's used</summary><ol>
+      <li>Before a match, ask the partner where their Auto drives and when. Draw it; name the plan; Save.</li>
+      <li>In the pit or queue, laptop on the robot's Wi-Fi (or USB): <b>Send to robot</b>. Disconnect before the match (R704).</li>
+      <li>On the Driver Hub: Auto INIT → BACK → d-pad left/right to pick the plan.</li>
+      <li>Auto won't chase balls, pick shot spots, or drive through a zone while it's in use (plus a robot-sized margin).</li>
+    </ol></details>`;
+
+  // plan list labels set as text (names are user data)
+  [...$("pick").options].forEach((o, i) => { if (state.plans[i]) o.textContent = state.plans[i].name; });
+  $("name").value = c.name;
+  $("name").oninput = (e) => { c.name = e.target.value; $("save").disabled = !dirty() || !c.name.trim(); setStatus(dirty() ? "dirty" : "", dirty() ? "Unsaved changes" : "Saved"); };
+  $("aRed").onclick = () => setAlliance("RED");
+  $("aBlue").onclick = () => setAlliance("BLUE");
+  $("new").onclick = () => guard(newPlan);
+  $("dup").onclick = () => { const z = c.zones.map((q) => q.slice()); state.cur = { file: null, name: c.name + " copy", zones: z, hash: null }; state.saved = null; render(); };
+  $("del").onclick = () => banner("warn", "Delete \"" + c.name + "\"?", [["Cancel", hideBanner], ["Delete", async () => {
+    await api("/api/delete", { file: c.file }); hideBanner(); await loadPlans();
+  }, true]]);
+  $("pick").onchange = (e) => guard(() => { const p = state.plans.find((q) => q.file === e.target.value); if (p) open(p); });
+  side.querySelectorAll(".win").forEach((b) => b.onclick = () => {
+    state.window = [Number(b.dataset.a), Number(b.dataset.b)];
+    if (state.sel >= 0) { c.zones[state.sel][4] = state.window[0]; c.zones[state.sel][5] = state.window[1]; }
+    render();
+  });
+
+  const box = $("zones");
+  c.zones.forEach((z, i) => {
+    const row = document.createElement("div");
+    row.className = "zone" + (i === state.sel ? " sel" : "");
+    const label = document.createElement("span");
+    label.textContent = "Zone " + (i + 1);
+    const t = document.createElement("span");
+    t.className = "t";
+    const a = num(z[4], (v) => { z[4] = v; }), b = num(z[5], (v) => { z[5] = v; });
+    t.append(a, document.createTextNode("to"), b, document.createTextNode("s"));
+    const del = document.createElement("button");
+    del.className = "small"; del.textContent = "✕";
+    del.onclick = (e) => { e.stopPropagation(); c.zones.splice(i, 1); state.sel = -1; render(); };
+    row.append(label, t, del);
+    row.onclick = () => { state.sel = i; render(); };
+    box.appendChild(row);
+  });
+}
+
+function num(v, set) {
+  const inp = document.createElement("input");
+  inp.type = "number"; inp.min = 0; inp.max = 30; inp.step = 0.5; inp.value = v;
+  inp.onclick = (e) => e.stopPropagation();
+  inp.onchange = () => { const x = Math.max(0, Math.min(30, parseFloat(inp.value))); if (isFinite(x)) set(x); render(); };
+  return inp;
+}
+
+function guard(fn) {
+  if (dirty() && state.saved !== null) banner("warn", "This plan has unsaved changes.", [["Keep editing", hideBanner], ["Discard them", () => { hideBanner(); fn(); }, true]]);
+  else fn();
+}
+
+function setAlliance(a) {
+  state.alliance = a;
+  try { localStorage.setItem("pp-alliance", a); } catch (e) { /* fine */ }
+  render();
+}
+
+// ----------------------------------------------------------- drawing / editing
+let drag = null;
+function fieldPoint(e) {
+  const p = svg.createSVGPoint();
+  p.x = e.clientX; p.y = e.clientY;
+  const q = p.matrixTransform(svg.getScreenCTM().inverse());
+  return [q.x, F - q.y];
+}
+const snap = (v, e) => e.shiftKey ? Math.round(v) : Math.round(v / 3) * 3;
+function clampOurs(x) { const [a, b] = ourHalf(); return Math.max(a, Math.min(b, x)); }
+const clampF = (v) => Math.max(0, Math.min(F, v));
+
+svg.addEventListener("pointerdown", (e) => {
+  if (drag) return;
+  const [x, y] = fieldPoint(e);
+  const [a, b] = ourHalf();
+  if (x < a || x > b || y < 0 || y > F) { state.sel = -1; render(); return; }
+  drag = { kind: "draw", x0: snap(x, e), y0: snap(y, e), x1: snap(x, e), y1: snap(y, e) };
+  svg.setPointerCapture(e.pointerId);
+});
+function startMove(e, i) {
+  e.stopPropagation();
+  state.sel = i;
+  const [x, y] = fieldPoint(e);
+  drag = { kind: "move", i, x, y, orig: toView(state.cur.zones[i]) };
+  svg.setPointerCapture(e.pointerId);
+  render();
+}
+function startResize(e, i) {
+  e.stopPropagation();
+  drag = { kind: "resize", i, orig: toView(state.cur.zones[i]) };
+  svg.setPointerCapture(e.pointerId);
+}
+svg.addEventListener("pointermove", (e) => {
+  if (!drag) return;
+  const [x, y] = fieldPoint(e);
+  if (drag.kind === "draw") {
+    drag.x1 = clampOurs(snap(x, e)); drag.y1 = clampF(snap(y, e));
+  } else if (drag.kind === "move") {
+    const o = drag.orig, w = o[2] - o[0], h = o[3] - o[1];
+    const [a, b] = ourHalf();
+    let nx = snap(o[0] + x - drag.x, e), ny = snap(o[1] + y - drag.y, e);
+    nx = Math.max(a, Math.min(b - w, nx)); ny = Math.max(0, Math.min(F - h, ny));
+    state.cur.zones[drag.i] = fromView([nx, ny, nx + w, ny + h, o[4], o[5]]);
+  } else {
+    const o = drag.orig;
+    // handle is the bottom-right corner in view: (x1, y0)
+    const nx = clampOurs(snap(x, e)), ny = clampF(snap(y, e));
+    state.cur.zones[drag.i] = fromView([Math.min(o[0], nx), Math.min(o[3], ny), Math.max(o[0], nx), Math.max(o[3], ny), o[4], o[5]]);
+  }
+  renderField();
+});
+svg.addEventListener("pointerup", () => {
+  if (!drag) return;
+  if (drag.kind === "draw") {
+    const z = [Math.min(drag.x0, drag.x1), Math.min(drag.y0, drag.y1), Math.max(drag.x0, drag.x1), Math.max(drag.y0, drag.y1)];
+    if (z[2] - z[0] >= 3 && z[3] - z[1] >= 3) {
+      state.cur.zones.push(fromView([...z, state.window[0], state.window[1]]));
+      state.sel = state.cur.zones.length - 1;
+    }
+  }
+  drag = null;
+  render();
+});
+
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); if (!$("save").disabled) save(false); return; }
+  const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName);
+  if (!typing && (e.key === "Delete" || e.key === "Backspace") && state.sel >= 0) {
+    state.cur.zones.splice(state.sel, 1); state.sel = -1; render();
+  }
+});
+window.addEventListener("beforeunload", (e) => { if (dirty() && state.cur.zones.length) { e.preventDefault(); e.returnValue = ""; } });
+
+$("allTimes").onchange = (e) => { state.allTimes = e.target.checked; $("time").disabled = state.allTimes; renderField(); };
+$("time").oninput = (e) => { state.t = Number(e.target.value); $("timeLabel").textContent = "t = " + state.t + " s"; renderField(); };
+$("save").onclick = () => save(false);
+$("push").onclick = async () => {
+  if (dirty() && state.cur.zones.length) { banner("warn", "Save this plan first: only saved plans are sent.", [["OK", hideBanner]]); return; }
+  $("push").disabled = true;
+  setStatus("", "Sending…");
+  const { status, data } = await api("/api/push", {});
+  $("push").disabled = false;
+  if (status === 200) {
+    banner("warn", "Sent " + data.sent.length + " plan(s) to the robot. Disconnect from the robot's Wi-Fi before the match.", [["OK", hideBanner]]);
+    setStatus("", "Sent");
+  } else {
+    banner("bad", data.error || "Send failed", [["OK", hideBanner]]);
+    setStatus("error", "Not sent");
+  }
+};
+
+loadPlans();
+</script>
+</body>
+</html>

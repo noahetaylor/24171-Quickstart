@@ -73,20 +73,48 @@ public class PartnerPlanTest {
     }
 
     @Test
-    public void encodesAndDecodes() {
+    public void textRoundTripsAndSkipsJunk() {
         PartnerPlan p = new PartnerPlan();
+        p.setName("14250 left push");
         p.set(0, 0, PartnerPlan.Window.ALL);
-        p.set(2, 5, PartnerPlan.Window.LATE);
-        p.cycle(1, 3);
-        PartnerPlan q = PartnerPlan.decode(p.encode());
-        assertEquals(p.encode(), q.encode());
-        assertSame(PartnerPlan.Window.ALL, q.get(1, 3));
-        assertEquals(3, q.blockedCount());
-        assertEquals(0, PartnerPlan.decode(null).blockedCount());
+        p.add(new PartnerPlan.Zone(30.5, 40, 50, 80.25, 3, 12.5));
+        PartnerPlan q = PartnerPlan.fromText(p.toText() + "zone=1,2,3\n# comment\nzone=a,b,c,d,e,f\nzone=0,0,10,10,9,4\n");
+        assertEquals("14250 left push", q.name());
+        assertEquals(2, q.zoneCount());   // the three bad zone lines are skipped
+        assertEquals(p.toText(), q.toText());
+        assertSame(PartnerPlan.Window.ALL, q.get(0, 0));
+        assertEquals(0, PartnerPlan.fromText(null).zoneCount());
+    }
+
+    @Test
+    public void freeFormZonesBlockWithTheirOwnTimes() {
+        PartnerPlan p = new PartnerPlan();
+        p.add(new PartnerPlan.Zone(30, 40, 50, 80, 3, 12.5));   // a laptop-drawn strip
+        assertTrue(p.at(Alliance.RED, 5).pointBlocked(40, 60));
+        assertFalse(p.at(Alliance.RED, 13).pointBlocked(40, 60));
+        assertFalse(p.at(Alliance.RED, 5).pointBlocked(65, 60));     // 15 in outside
+        assertTrue(p.at(Alliance.BLUE, 5).pointBlocked(104, 84));    // same zone, rotated for blue
+    }
+
+    @Test
+    public void tileEditsOnlyTouchTheirOwnTile() {
+        PartnerPlan p = new PartnerPlan();
+        p.add(new PartnerPlan.Zone(30, 40, 50, 80, 0, 30));
+        p.cycle(1, 2);                                   // B3 -> whole Auto
+        assertSame(PartnerPlan.Window.ALL, p.get(1, 2));
+        p.set(1, 2, PartnerPlan.Window.FREE);
+        assertEquals(1, p.zoneCount());                  // the laptop zone is still there
+        assertSame(PartnerPlan.Window.FREE, p.get(1, 2));
+        PartnerPlan copy = new PartnerPlan();
+        copy.copyFrom(p);
+        assertEquals(p.toText(), copy.toText());
     }
 
     @Test
     public void rendersFromTheDriveTeamsWall() {
+        PartnerPlan partial = new PartnerPlan();
+        partial.add(new PartnerPlan.Zone(30, 40, 40, 45, 0, 30));   // part of B2
+        assertTrue(partial.render(-1, 0, Alliance.RED)[2].contains("+"));
         PartnerPlan p = plan(0, 5, PartnerPlan.Window.ALL);   // A6: nearest column, far-wall end
         String[] red = p.render(0, 5, Alliance.RED);
         assertTrue(red[0].startsWith("far wall"));

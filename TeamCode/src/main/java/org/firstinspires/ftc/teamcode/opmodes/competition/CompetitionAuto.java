@@ -27,6 +27,8 @@ import org.firstinspires.ftc.teamcode.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.RobotHardware;
 import org.firstinspires.ftc.teamcode.subsystems.Vision;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
+import com.qualcomm.robotcore.util.ReadWriteFile;
 import org.firstinspires.ftc.teamcode.tuning.AimTuning;
 import org.firstinspires.ftc.teamcode.tuning.AutoTuning;
 import org.firstinspires.ftc.teamcode.tuning.MechanismTuning;
@@ -35,6 +37,9 @@ import org.firstinspires.ftc.teamcode.vision.BallPicker;
 import org.firstinspires.ftc.teamcode.vision.BallSighting;
 import org.firstinspires.ftc.teamcode.vision.TagLocalizer;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -44,10 +49,12 @@ import java.util.List;
  * INIT (gamepad 1), two pages, BACK switches:
  *   SETUP:   d-pad left/right = start spot,  Y = garden on/off,
  *            d-pad up/down = start delay (0.5 s steps).
- *   PARTNER: mark the tiles our partner's Auto uses. D-pad moves the
- *            cursor, A cycles the tile: . free, # whole Auto, 1 / 2 / 3 =
- *            0-10 / 10-20 / 20-30 s. B clears all. Auto stays out of
- *            marked tiles (balls, shot spots, routes, the garden).
+ *   PARTNER: d-pad left/right picks a plan made on the laptop (Partner
+ *            Planner, sent to the robot in the pit) or none. X = edit
+ *            whole tiles here instead (fallback): d-pad cursor, A cycles
+ *            . free / # whole Auto / 1 2 3 = 0-10 / 10-20 / 20-30 s,
+ *            B clears. Auto stays out of the plan's zones (balls, shot
+ *            spots, routes, the garden).
  *
  * Flow (AutoBrain decides each next job):
  *   shoot the 4 preloads (3 tip the starting CELL; confirm with the tags,
@@ -75,8 +82,13 @@ public abstract class CompetitionAuto extends OpMode {
     private StartSpot startSpot = StartSpot.AUDIENCE_WALL;
     private boolean useGarden = true;
     private double delayS = 0;
-    private final boolean[] last = new boolean[12];
+    private final boolean[] last = new boolean[14];
     private boolean partnerPage = false;
+    private boolean tileEdit = false;
+    /** Plans found on the robot (laptop-made); index 0 = none. */
+    private final List<PartnerPlan> library = new ArrayList<>();
+    private int libraryIndex = 0;
+    private String libraryNote = "";
     private int cursorCol = 0, cursorRow = 0;
     private final PartnerPlan plan = MatchState.partnerPlan;
 
@@ -127,6 +139,34 @@ public abstract class CompetitionAuto extends OpMode {
         ledger.reset();
         ledgerCell = hive.upCell(alliance);
         MatchState.lastPose = null;
+        loadLibrary();
+    }
+
+    /** Plans sent from the laptop: /sdcard/FIRST/data/partner-plans/*.txt */
+    private void loadLibrary() {
+        library.clear();
+        library.add(new PartnerPlan());   // "none"
+        File dir = new File(AppUtil.ROOT_FOLDER + "/data/partner-plans");
+        File[] files = dir.listFiles();
+        if (files == null) {
+            libraryNote = "no plans on the robot yet (Partner Planner: Send to robot)";
+            return;
+        }
+        Arrays.sort(files);
+        for (File f : files) {
+            if (!f.getName().endsWith(".txt")) continue;
+            try {
+                PartnerPlan p = PartnerPlan.fromText(ReadWriteFile.readFile(f));
+                if (p.name().isEmpty()) p.setName(f.getName().replace(".txt", ""));
+                library.add(p);
+            } catch (RuntimeException e) {
+                libraryNote = "could not read " + f.getName();
+            }
+        }
+        // Keep whatever was chosen last match selected if it's still there.
+        for (int i = 1; i < library.size(); i++) {
+            if (library.get(i).name().equals(plan.name()) && !plan.name().isEmpty()) libraryIndex = i;
+        }
     }
 
     @Override
@@ -152,30 +192,49 @@ public abstract class CompetitionAuto extends OpMode {
         if (illegal != null) telemetry.addData("!! START SPOT PROBLEM", illegal);
         telemetry.addData("Garden (Y)", useGarden ? "ON" : "OFF (partner takes it)");
         telemetry.addData("Delay (d-pad up/down)", "%.1f s", delayS);
-        telemetry.addData("Partner plan (BACK to edit)", plan.blockedCount() == 0 ? "none"
-                : plan.blockedCount() + " tile(s) marked: CHECK it is this match's partner");
+        telemetry.addData("Partner plan (BACK)", plan.zoneCount() == 0 ? "none"
+                : "\"" + plan.name() + "\" (" + plan.zoneCount() + " zones): CHECK it is this match's partner");
         telemetry.addLine("Load 4 POLLEN.");
         if (!hw.missing.isEmpty()) telemetry.addData("Not in config", hw.missing);
         telemetry.update();
     }
 
     private void partnerInit() {
-        // On screen: nearest column at the bottom, the drive team's left on the left.
-        if (pressed(6, gamepad1.dpad_up)) cursorCol = Math.min(PartnerPlan.COLS - 1, cursorCol + 1);
-        if (pressed(7, gamepad1.dpad_down)) cursorCol = Math.max(0, cursorCol - 1);
-        if (pressed(8, gamepad1.dpad_left)) cursorRow = Math.min(PartnerPlan.ROWS - 1, cursorRow + 1);
-        if (pressed(9, gamepad1.dpad_right)) cursorRow = Math.max(0, cursorRow - 1);
-        if (pressed(10, gamepad1.a)) plan.cycle(cursorCol, cursorRow);
-        if (pressed(11, gamepad1.b)) plan.clear();
+        if (pressed(12, gamepad1.x)) tileEdit = !tileEdit;
+        if (tileEdit) {
+            // On screen: nearest column at the bottom, the drive team's left on the left.
+            if (pressed(6, gamepad1.dpad_up)) cursorCol = Math.min(PartnerPlan.COLS - 1, cursorCol + 1);
+            if (pressed(7, gamepad1.dpad_down)) cursorCol = Math.max(0, cursorCol - 1);
+            if (pressed(8, gamepad1.dpad_left)) cursorRow = Math.min(PartnerPlan.ROWS - 1, cursorRow + 1);
+            if (pressed(9, gamepad1.dpad_right)) cursorRow = Math.max(0, cursorRow - 1);
+            if (pressed(10, gamepad1.a)) {
+                plan.cycle(cursorCol, cursorRow);
+                plan.setName("edited on Driver Hub");
+            }
+            if (pressed(11, gamepad1.b)) plan.clear();
+        } else {
+            int n = library.size();
+            boolean changed = false;
+            if (pressed(8, gamepad1.dpad_left)) { libraryIndex = (libraryIndex + n - 1) % n; changed = true; }
+            if (pressed(9, gamepad1.dpad_right)) { libraryIndex = (libraryIndex + 1) % n; changed = true; }
+            if (changed) plan.copyFrom(library.get(libraryIndex));
+        }
 
         telemetry.addLine("PARTNER PLAN (" + alliance + ")   BACK = setup page");
-        for (String line : plan.render(cursorCol, cursorRow, alliance)) telemetry.addLine(line);
-        telemetry.addLine("");
-        telemetry.addLine("Tile " + PartnerPlan.tileName(cursorCol, cursorRow, alliance) + ": "
-                + plan.get(cursorCol, cursorRow));
-        telemetry.addLine("A: cycle  . free  # whole Auto");
-        telemetry.addLine("          1 = 0-10s  2 = 10-20s  3 = 20-30s");
-        telemetry.addLine("B: clear all");
+        telemetry.addLine(tileEdit ? "EDITING TILES (X = back to plan list)"
+                : "Plan " + libraryIndex + "/" + (library.size() - 1) + ": "
+                  + (plan.zoneCount() == 0 ? "none" : plan.name()) + "   (d-pad L/R, X = edit tiles)");
+        for (String line : plan.render(tileEdit ? cursorCol : -1, cursorRow, alliance)) telemetry.addLine(line);
+        telemetry.addLine("# whole Auto  1/2/3 = 0-10/10-20/20-30s  + part of tile");
+        if (tileEdit) {
+            telemetry.addLine("Tile " + PartnerPlan.tileName(cursorCol, cursorRow, alliance) + ": "
+                    + plan.get(cursorCol, cursorRow) + "   A cycle, B clear all");
+        } else {
+            for (PartnerPlan.Zone z : plan.zones()) {
+                telemetry.addLine(String.format("  zone %.0f..%.0f s", z.fromS, z.toS));
+            }
+            if (!libraryNote.isEmpty()) telemetry.addLine(libraryNote);
+        }
         telemetry.update();
     }
 
