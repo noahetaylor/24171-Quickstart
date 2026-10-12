@@ -84,6 +84,34 @@ public final class HardwareConfig {
     public static final double POD_INCHES_PER_TICK = 1.0 / (19.89436789 * 25.4);
 
     // ---------------------------------------------------------------
+    // Mechanisms (Expansion Hub). PROPOSED layout, docs/port-map.md.
+    // Optional in code: a device missing from the Driver Hub config is
+    // skipped (and listed in telemetry), so a half-built robot still runs.
+    // ---------------------------------------------------------------
+    public static final String POLLEN_FLYWHEEL = "pollenFlywheel"; // EH motor 0 (5203 1:1)
+    public static final String INTAKE = "intake";                  // EH motor 1 (5203 13.7:1)
+    public static final String TRANSFER = "transfer";              // EH motor 2 (5203 13.7:1): trough -> flywheels
+    public static final String NECTAR_FLYWHEEL = "nectarFlywheel"; // EH motor 3 (5203 1:1)
+
+    public static final String CROSS_WHEELS = "crossWheels";       // EH servo 0, continuous: NECTAR cross wheels
+    public static final String RAMP_BAR = "rampBar";               // EH servo 1: intake ramp bar
+    public static final String LIMELIGHT_PAN = "limelightPan";     // EH servo 2
+    public static final String LIMELIGHT_TILT = "limelightTilt";   // EH servo 3
+    // EH servos 4, 5: reserved for the hood servos; CH servos 0, 1: turret yaw.
+
+    /** Positive power must: pull balls IN / move balls UP toward the flywheels. Flip if not. */
+    public static final DcMotorSimple.Direction INTAKE_DIR = DcMotorSimple.Direction.FORWARD;
+    public static final DcMotorSimple.Direction TRANSFER_DIR = DcMotorSimple.Direction.FORWARD;
+    /** Positive velocity must launch the ball. Flip if a flywheel spins backward. */
+    public static final DcMotorSimple.Direction POLLEN_FLYWHEEL_DIR = DcMotorSimple.Direction.FORWARD;
+    public static final DcMotorSimple.Direction NECTAR_FLYWHEEL_DIR = DcMotorSimple.Direction.FORWARD;
+    /** Positive power must carry NECTAR the way the transfer does. */
+    public static final DcMotorSimple.Direction CROSS_WHEELS_DIR = DcMotorSimple.Direction.FORWARD;
+
+    /** goBILDA 5203 motor encoder: 28 counts per motor rev; flywheels are chained 1:1. */
+    public static final double FLYWHEEL_TICKS_PER_REV = 28.0;
+
+    // ---------------------------------------------------------------
     // IMU (built into the Control Hub, always named "imu").
     // MUST match how the hub is physically mounted, or heading will be
     // wrong (a logo-DOWN hub configured as logo-UP turns backwards).

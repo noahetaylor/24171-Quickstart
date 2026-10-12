@@ -16,7 +16,7 @@ All code is under `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/`.
 
 | I want to… | Go to |
 |---|---|
-| Run a match | Driver Hub group **Competition**: Red/Blue Auto, Red/Blue TeleOp (`opmodes/competition/`) |
+| Run a match | Driver Hub group **Competition**: Red/Blue Auto, Red/Blue TeleOp (`opmodes/competition/`). Controls: [docs/driver-controls.md](docs/driver-controls.md) |
 | Test something or gather data | Driver Hub group **Testing** (`opmodes/testing/`) |
 | Change a number we tuned from testing (shot table, rpm, aim) | `tuning/` (also editable live from Panels in the pit) |
 | Change a hardware name or the odometry pod layout | `config/` (pods: the Pod Placer tool, `tools/pod-placer/`) |

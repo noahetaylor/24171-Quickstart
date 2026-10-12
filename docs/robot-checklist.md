@@ -31,6 +31,25 @@ a PR as they're done.
       we shoot from
 - [ ] `tuning/AimTuning`: turns crisply onto target without overshoot
 
+## 4. Mechanisms ([port-map.md](port-map.md))
+- [ ] Wire to the port map (or change it and `config/HardwareConfig` together)
+- [ ] Directions: intake pulls in, transfer moves up, cross wheels carry
+      NECTAR, flywheels launch (`HardwareConfig` `*_DIR`)
+- [ ] Ramp bar servo positions in `tuning/MechanismTuning`
+      (`RAMP_DOWN` / `BLOCK` / `OPEN` / `STOW`). STOW must keep the robot
+      inside the 18 in sizing box
+- [ ] Flywheel velocity PIDF (`FLYWHEEL_F` first, then `P`): reaches rpm
+      fast without overshoot; telemetry shows actual vs target
+- [ ] `FEED_POWER`: balls go up one after another, not jammed
+
+## 5. Competition TeleOp ([driver-controls.md](driver-controls.md))
+- [ ] Hold right trigger: turns onto the CELL and fires once both flywheels
+      are at speed
+- [ ] Hold left trigger (pre-align): drives to a shot spot, holds it, fires.
+      Letting go hands control back at once
+- [ ] Practice start spot (`MatchState`, no Auto) matches where the robot
+      is placed
+
 ## Done
 - [x] Balls leave out the front (`LAUNCH_YAW_DEG = 0`), team, 2026-10-12
 - [x] Field CAD: HIVE ±12 in from center, up-CELL opening ~53.5 in high,
