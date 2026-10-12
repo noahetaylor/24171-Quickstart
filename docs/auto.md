@@ -75,8 +75,15 @@ Start spots are placeholders until the team picks real ones. They're in
    intake running, back out. Counted as 4 balls.
 3. **Shoot** when full, or when holding enough to tip.
 4. **Vision pickups:**
-   - Sweep the camera, pick the best ball (POLLEN or our NECTAR, our half
-     only), drive the intake over it.
+   - **Position lock first.** If the last tag fix is more than
+     `RELOCK_AFTER_S` old and the HIVE is within the gimbal's reach, take
+     a quick tag fix. Ball positions are computed from our pose, so a
+     drifted pose would send us to the wrong spot.
+   - **Search.** Three stepped looks: straight, left, right. The camera
+     holds still for each, because sweeping smears the angle. Pick the
+     best ball: POLLEN or our NECTAR, our half only.
+   - **Drive the intake over it.** On the way the camera stays on the ball
+     and re-steers if it moved (knocked, or first seen from far away).
    - If nothing is seen, turn 60° and look again, up to 3 tries.
 5. **Shoot** what's left. Stop with time to spare.
 
@@ -84,6 +91,18 @@ The second tip needs about 8 POLLEN in the new CELL. That's 1 (4th
 preload) + 4 (garden) + 3 more from pickups. That's tight in 30 s. A
 partner shooting our HIVE makes it easier, and the tag check keeps us
 right about which CELL is up either way.
+
+## The Limelight's two jobs
+
+| When | Mode | For |
+|---|---|---|
+| Lining up, shooting, tip check | Tags | which CELL is up; position fix |
+| Just before a ball search, if the last fix is old | Tags (LOCK, at most `LOCK_S`) | position fix |
+| Searching, driving to a ball | Balls | where the balls are |
+
+After every pipeline switch or big gimbal swing, frames are ignored for a
+moment (`VisionTuning.SWITCH_SETTLE_S`, `GIMBAL_SETTLE_S`). Otherwise
+something could be located using the old camera angle.
 
 ## Without a ball sensor
 

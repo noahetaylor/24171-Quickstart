@@ -20,6 +20,13 @@ public final class VisionTuning {
     /** Turning costs this many inches of driving per 90 degrees when choosing a ball. */
     public static double TURN_COST_IN_PER_90 = 12;
 
+    // Settling: frames are ignored for a moment after the pipeline switches or the gimbal
+    // swings, so a ball or tag is never located with the wrong camera angle.
+    public static double SWITCH_SETTLE_S = 0.25;
+    public static double GIMBAL_SETTLE_S = 0.2;
+    /** A gimbal move bigger than this (deg) triggers GIMBAL_SETTLE_S. */
+    public static double GIMBAL_BIG_MOVE_DEG = 6;
+
     // AprilTag position correction (TagLocalizer)
     /** Fraction of the way to move odometry toward each tag fix (0 = off). */
     public static double TAG_GAIN = 0.3;
