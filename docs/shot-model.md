@@ -36,13 +36,28 @@ also leads shots taken while moving. Gains and fire rules are in
 
 ## Filling the table at practice
 
-1. Run **Shot Planner Check** (TeleOp list). In INIT, pick the alliance and
-   place the robot's center on the start spot it shows, facing the far wall.
-2. Drive to a spot. Turn by the "turn" amount shown, so the shooter points
-   at the CELL.
-3. Run the flywheel at the rpm shown and adjust until shots go in reliably.
-4. Add a row in `tuning/ShotTables.java`: `.add(distance, hood, rpm)`. Spread rows
-   across the distances you actually shoot from.
+1. **Robot: run Shot Tuner** (Driver Hub → Testing). Pick the alliance in
+   INIT. Load only the ball type for the shooter you're testing (**X**
+   switches POLLEN / NECTAR).
+2. **Shoot from several distances.**
+   - **Y** sets the rpm to what the model suggests; the d-pad changes it in
+     steps of 50.
+   - **A** fires.
+   - For each ball, press **RB** if it went in, **LB** if it missed.
+     **B** undoes the last one.
+   - Distance comes from odometry. If odometry isn't trusted yet, press
+     **back** for TAPE mode and set the distance with d-pad left/right.
+3. **Laptop: open the Shot Table Editor.** Double-click
+   `tools/shot-table-editor/Shot Table Editor.bat`.
+   - **Pull from robot** copies the logs over. The laptop must be on the
+     robot's Wi-Fi, or plugged in by USB. You can also drag CSV files in.
+   - Hits show as green dots, misses as red crosses, and physics as a
+     dashed line.
+   - Drag the blue table rows to where the green is thickest, or click
+     **Suggest rows from hits**.
+   - **Save** rewrites only the rows in `tuning/ShotTables.java`. Then build
+     and deploy.
+4. **Commit `data/shot-logs/`** along with the table change.
 
 ## Settings in `tuning/ShooterTuning.java`
 

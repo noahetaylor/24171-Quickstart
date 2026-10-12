@@ -27,8 +27,9 @@ a PR as they're done.
 - [ ] `tuning/ShooterTuning` `FIRE_LATENCY_S`: trigger to ball leaving
 - [ ] `EXIT_EFFICIENCY`: the measured ball speed fits the physics rpm
 - [ ] **Shot Planner Check**: distance readout matches a tape measure
-- [ ] Fill `tuning/ShotTables` for both shooters across the distances
-      we shoot from
+- [ ] Shot Tuner → Shot Table Editor: fill both tables across the distances
+      we shoot from (steps in shot-model.md)
+- [ ] Shot Table Editor: **Pull from robot** works over the robot's Wi-Fi
 - [ ] `tuning/AimTuning`: turns crisply onto target without overshoot
 
 ## 4. Mechanisms ([port-map.md](port-map.md))
