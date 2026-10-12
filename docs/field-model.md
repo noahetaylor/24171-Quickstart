@@ -55,19 +55,20 @@ AUDIENCE CELL and BLUE's SCORING CELL are up, each holding 3 NECTAR.
 SDK 12.0's tag library treats each CELL's tags as one group, with the
 group's origin at the center of the CELL opening.
 
-## Still estimated (check against the Onshape field CAD)
+## Where the numbers come from
 
-Everything else comes straight from the manual or the Event Field Setup
-Guide. These values were read off figures:
+Most values come straight from the manual or the Event Field Setup Guide.
+We measured these three in the Onshape field CAD:
 
-| Constant in `Field.java` | Value now | What to measure |
+| Constant in `Field.java` | Value | Meaning |
 |---|---|---|
-| `HIVE_X_OFFSET_IN` | 12.0 | sideways distance from field center to each HIVE's middle |
-| `UP_CELL_OPENING_HEIGHT_IN` | 43.95 (pivot height, placeholder) | height of an up CELL's opening center |
+| `HIVE_X_OFFSET_IN` | 12.0 | sideways distance from field center to each HIVE's center |
+| `UP_CELL_OPENING_HEIGHT_IN` | 53.5 (rough) | height of an up CELL's opening center |
 | `FLOWER_WALL_INSET_IN` | 3.0 | wall to FLOWER center |
 
-Two more things to confirm against the CAD:
-- **CELL position when up.** `Cell.openingWhenUp()` places each CELL 9.4 in
-  (half the 18.8 in spacing) from center, straight out along y. A tipped-up
-  CELL probably sits somewhat differently.
-- **FLOWER positions.** They were read off a figure, to about ±1 in.
+Still estimated:
+- **How far an up CELL sits from center.** `Cell.openingWhenUp()` uses
+  9.4 in, half the 18.8 in spacing between CELLs. A tipped-up CELL probably
+  sits a bit further out.
+- **Where the FLOWERs are along each wall.** Read off a figure, to about
+  ±1 in.

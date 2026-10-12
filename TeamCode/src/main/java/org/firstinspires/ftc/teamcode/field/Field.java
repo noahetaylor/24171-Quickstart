@@ -12,9 +12,8 @@ package org.firstinspires.ftc.teamcode.field;
  *   - Field center is (72, 72). Tile seams every 24 in.
  *
  * Sources: Competition Manual section 9 and the Event Field Setup Guide V1.0.
- * Numbers marked ESTIMATE were read off figures, not given in the text. Check
- * them against the Onshape field CAD (or a tape measure on a real field)
- * before trusting a shot that depends on them.
+ * Numbers marked "team-measured" come from our own measurement of the
+ * Onshape field CAD, not from FIRST's text.
  */
 public final class Field {
     private Field() {}
@@ -40,14 +39,11 @@ public final class Field {
     public static final double CELL_OPENING_HEIGHT_IN = 14.0;
     public static final double CELL_DEPTH_IN = 12.0;
 
-    /** ESTIMATE: each HIVE's center is this far from field center in X (setup guide figures). */
+    /** Team-measured (field CAD): each HIVE's center is this far from field center in X. */
     public static final double HIVE_X_OFFSET_IN = 12.0;
 
-    /**
-     * ESTIMATE: height of an UP cell's opening center. The pivot height is a
-     * placeholder until it is measured in the field CAD.
-     */
-    public static final double UP_CELL_OPENING_HEIGHT_IN = HIVE_PIVOT_HEIGHT_IN;
+    /** Team-measured (field CAD, roughly): height of an UP cell's opening center. */
+    public static final double UP_CELL_OPENING_HEIGHT_IN = 53.5;
 
     public static final double RED_HIVE_X = CENTER_IN - HIVE_X_OFFSET_IN;
     public static final double BLUE_HIVE_X = CENTER_IN + HIVE_X_OFFSET_IN;
@@ -55,7 +51,7 @@ public final class Field {
     // -------------------------------------------------------------- FLOWERS
     // Four, on the perimeter walls at tile seams (setup guide 10.4).
 
-    /** ESTIMATE: wall to FLOWER center. */
+    /** Team-measured (field CAD): wall to FLOWER center. */
     public static final double FLOWER_WALL_INSET_IN = 3.0;
     public static final double FLOWER_TOP_HEIGHT_IN = 21.5;     // manual 9.7, top opening
     public static final double FLOWER_TOP_DIAMETER_IN = 4.0;

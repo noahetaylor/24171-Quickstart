@@ -51,7 +51,9 @@ public enum Cell {
 
     /**
      * Center of this CELL's opening while it is the UP cell: the shooting
-     * target. ESTIMATE until checked against the field CAD (see Field).
+     * target. X and height are measured; Y is ESTIMATED as half the 18.8 in
+     * CELL spacing either side of center, since a tipped-up CELL likely
+     * sits somewhat further out.
      */
     public FieldPoint openingWhenUp() {
         double x = alliance == Alliance.RED ? Field.RED_HIVE_X : Field.BLUE_HIVE_X;
