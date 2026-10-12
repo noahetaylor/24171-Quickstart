@@ -25,6 +25,7 @@ All code is under `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/`.
 | Understand the field coordinates / red vs blue | [docs/field-model.md](docs/field-model.md) |
 | Understand shooting + auto-aim | [docs/shot-model.md](docs/shot-model.md) |
 | Wire the robot | [docs/port-map.md](docs/port-map.md) |
+| Set up / calibrate the Limelight | [docs/vision.md](docs/vision.md) (OpModes: Limelight Setup, Limelight Check) |
 
 Logic lives in `field/`, `shooting/`, `subsystems/`, `replay/` and
 `pedroPathing/`. You shouldn't need to touch these at practice.

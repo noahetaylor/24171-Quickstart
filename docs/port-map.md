@@ -70,7 +70,7 @@ Control Hub servo ports 0 and 1 are reserved for turret yaw.
 
 ### USB
 
-Limelight 3A → Control Hub USB 3.0 port (R708).
+Limelight 3A → Control Hub USB 3.0 port (R708). In the Driver Hub configuration it appears as an Ethernet device; name it `limelight`. Setup: [vision.md](vision.md).
 
 ### Directions to check
 

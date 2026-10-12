@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -31,7 +32,8 @@ public class RobotHardware {
 
     public DcMotorEx pollenFlywheel, nectarFlywheel, intake, transfer;
     public CRServo crossWheels;
-    public Servo rampBar;
+    public Servo rampBar, limelightPan, limelightTilt;
+    public Limelight3A limelight;
 
     /** Mechanism names not found in the robot configuration. */
     public final List<String> missing = new ArrayList<>();
@@ -91,8 +93,18 @@ public class RobotHardware {
         if (crossWheels == null) missing.add(HardwareConfig.CROSS_WHEELS);
         else crossWheels.setDirection(HardwareConfig.CROSS_WHEELS_DIR);
 
-        rampBar = hardwareMap.tryGet(Servo.class, HardwareConfig.RAMP_BAR);
-        if (rampBar == null) missing.add(HardwareConfig.RAMP_BAR);
+        rampBar = servo(hardwareMap, HardwareConfig.RAMP_BAR);
+        limelightPan = servo(hardwareMap, HardwareConfig.LIMELIGHT_PAN);
+        limelightTilt = servo(hardwareMap, HardwareConfig.LIMELIGHT_TILT);
+
+        limelight = hardwareMap.tryGet(Limelight3A.class, HardwareConfig.LIMELIGHT);
+        if (limelight == null) missing.add(HardwareConfig.LIMELIGHT);
+    }
+
+    private Servo servo(HardwareMap hardwareMap, String name) {
+        Servo sv = hardwareMap.tryGet(Servo.class, name);
+        if (sv == null) missing.add(name);
+        return sv;
     }
 
     private DcMotorEx motor(HardwareMap hardwareMap, String name) {

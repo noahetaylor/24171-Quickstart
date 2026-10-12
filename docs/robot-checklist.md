@@ -43,7 +43,16 @@ a PR as they're done.
       fast without overshoot; telemetry shows actual vs target
 - [ ] `FEED_POWER`: balls go up one after another, not jammed
 
-## 5. Competition TeleOp ([driver-controls.md](driver-controls.md))
+## 5. Vision ([vision.md](vision.md))
+- [ ] Limelight web page: slot 0 = Python, slot 1 = AprilTag 36h11;
+      run **Limelight Setup**
+- [ ] Gimbal servo calibration in `config/LimelightMount` (Limelight Check)
+- [ ] Lens position measured into `config/LimelightMount`
+- [ ] A ball on a known spot is located within ~2 in
+- [ ] HSV ranges tuned under event-like lighting (`ball_pipeline.py`)
+- [ ] Tag mode sees the up CELL; `CELL_TAG_HEIGHT_IN` measured
+
+## 6. Competition TeleOp ([driver-controls.md](driver-controls.md))
 - [ ] Hold right trigger: turns onto the CELL and fires once both flywheels
       are at speed
 - [ ] Hold left trigger (pre-align): drives to a shot spot, holds it, fires.
