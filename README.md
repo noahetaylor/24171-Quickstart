@@ -15,7 +15,8 @@ This is the real FTC SDK + Pedro Pathing project that gets deployed to the Contr
 Any laptop that will build or deploy code needs this set up **once**:
 
 - **Git** — https://git-scm.com/downloads
-- **Android Studio** — Quail 2 (2026.1.2) or later, https://developer.android.com/studio
+- **Android Studio** — Narwhal 3 Feature Drop or later (needed by FTC SDK 12.0's
+  Gradle 9.1 / Android Gradle Plugin 8.13.2), https://developer.android.com/studio
   (bundles its own JDK, so no separate Java install needed)
 - **Android SDK Platform API 34** — install via Android Studio's SDK Manager
   (Settings ▸ Languages & Frameworks ▸ Android SDK ▸ SDK Platforms tab ▸
@@ -26,6 +27,10 @@ Any laptop that will build or deploy code needs this set up **once**:
 > **Note on compileSdk vs. your machine's SDKs:** the project compiles against
 > **API 34**. It's fine to have other API levels (16.0, etc.) installed alongside
 > it — the build uses whichever `compileSdk` is set, not whatever's newest.
+
+> **FTC SDK version:** the code is on **SDK 12.0** (the BIOBUZZ release). The
+> Driver Hub app and the Control Hub firmware should match it. Update them with
+> the REV Hardware Client before the first deploy of a new SDK version.
 
 ---
 
