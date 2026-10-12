@@ -17,9 +17,11 @@ import org.firstinspires.ftc.teamcode.subsystems.Feeder;
 import org.firstinspires.ftc.teamcode.subsystems.Flywheels;
 import org.firstinspires.ftc.teamcode.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.RobotHardware;
+import org.firstinspires.ftc.teamcode.subsystems.Vision;
 import org.firstinspires.ftc.teamcode.tuning.AimTuning;
 import org.firstinspires.ftc.teamcode.tuning.MechanismTuning;
 import org.firstinspires.ftc.teamcode.tuning.ShotTables;
+import org.firstinspires.ftc.teamcode.vision.TagLocalizer;
 
 /**
  * The match TeleOp. RedTeleOp / BlueTeleOp pick the alliance; everything
@@ -33,9 +35,12 @@ import org.firstinspires.ftc.teamcode.tuning.ShotTables;
  *   RB / LB         hold: intake / eject
  *   B               hold: feed without aiming (unjam)
  *   X               flywheel idle spin on/off
- *   Y               our HIVE tipped (until the camera does it)
+ *   Y               our HIVE tipped (backup: the camera tracks it from the tags)
  *   back            reset HIVEs to the match-start state
  *   d-pad           ramp bar: up stow, down down, left block, right open
+ *
+ * The Limelight stays on our HIVE: it tracks which CELL is up and corrects
+ * the odometry position from the CELL tags while the robot is nearly still.
  *
  * Rumbles at 1:00 left (FLOWER scoring unlocked) and 0:20 left.
  */
@@ -51,6 +56,8 @@ public abstract class CompetitionTeleOp extends OpMode {
     private Flywheels flywheels;
     private Feeder feeder;
     private Intake intake;
+    private Vision vision;
+    private int tagFixes = 0;
     private final HiveState hive = MatchState.hive;
 
     private boolean idleSpin = true;
@@ -71,6 +78,7 @@ public abstract class CompetitionTeleOp extends OpMode {
         flywheels = new Flywheels(hw);
         feeder = new Feeder(hw);
         intake = new Intake(hw);
+        vision = new Vision(hw);
 
         Pose start = MatchState.lastPose != null ? MatchState.lastPose : MatchState.practiceStart(alliance);
         follower.setStartingPose(start);
@@ -88,6 +96,7 @@ public abstract class CompetitionTeleOp extends OpMode {
     @Override
     public void start() {
         follower.startTeleopDrive(true);
+        vision.start();
         resetRuntime();
     }
 
@@ -101,6 +110,17 @@ public abstract class CompetitionTeleOp extends OpMode {
         if (xEdge.rose(gamepad1.x)) idleSpin = !idleSpin;
         if (yEdge.rose(gamepad1.y)) hive.tipped(alliance);
         if (backEdge.rose(gamepad1.back)) hive.reset();
+
+        // Camera on our HIVE: tracks which CELL is up and corrects odometry when nearly still.
+        vision.lookAtHive(alliance, pose.getX(), pose.getY(), pose.getHeading());
+        vision.observeHive(hive, pose.getHeading());
+        double[] fix = TagLocalizer.correct(pose.getX(), pose.getY(), vision.lastFix(),
+                Math.hypot(vel.getXComponent(), vel.getYComponent()), Math.toDegrees(omega));
+        if (fix != null) {
+            follower.setPose(new Pose(fix[0], fix[1], pose.getHeading()));
+            pose = follower.getPose();
+            tagFixes++;
+        }
 
         FieldPoint target = hive.target(alliance);
         AutoAim.Command aim = AutoAim.update(pose.getX(), pose.getY(), pose.getHeading(),
@@ -171,6 +191,7 @@ public abstract class CompetitionTeleOp extends OpMode {
         telemetry.addData("Pose", "x %.1f  y %.1f  h %.1f",
                 pose.getX(), pose.getY(), Math.toDegrees(pose.getHeading()));
         telemetry.addData("Time left", "%.0f s%s", Math.max(0, left), left <= 60 ? "  FLOWER OPEN" : "");
+        telemetry.addData("Tag fixes", tagFixes);
         if (!hw.missing.isEmpty()) telemetry.addData("Not in config", hw.missing);
         telemetry.update();
     }
@@ -204,6 +225,7 @@ public abstract class CompetitionTeleOp extends OpMode {
         flywheels.stop();
         feeder.stop();
         intake.stop();
+        vision.stop();
     }
 
     /** Rising-edge detector for buttons. */

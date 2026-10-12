@@ -30,6 +30,7 @@ import org.firstinspires.ftc.teamcode.tuning.MechanismTuning;
 import org.firstinspires.ftc.teamcode.tuning.ShotTables;
 import org.firstinspires.ftc.teamcode.vision.BallPicker;
 import org.firstinspires.ftc.teamcode.vision.BallSighting;
+import org.firstinspires.ftc.teamcode.vision.TagLocalizer;
 
 import java.util.List;
 
@@ -44,6 +45,8 @@ import java.util.List;
  *   shoot the 4 preloads (3 tip the starting CELL; confirm with the tags,
  *   then the 4th goes into the new up CELL) -> GARDEN (optional) -> shoot
  *   -> Limelight pickups on our half -> shoot ... until time runs out.
+ * While lining up and shooting, the Limelight watches the CELL tags: they
+ * confirm tips (ours or a partner's) and correct the odometry position.
  * No ball sensor: balls held are counted (pickups assumed to succeed),
  * and feeding runs for FEED_PER_BALL_S per ball. Pose and HIVE state carry
  * into TeleOp through MatchState.
@@ -82,6 +85,9 @@ public abstract class CompetitionAuto extends OpMode {
     private boolean collectGaveUp = false;
     private int scanTurns = 0;
     private Cell upBeforeTip = null;
+    /** The up CELL the ledger is counting for; when the HIVE state changes, the ledger restarts. */
+    private Cell ledgerCell = null;
+    private int tagFixes = 0;
     private String note = "";
 
     protected CompetitionAuto(Alliance alliance) {
@@ -102,6 +108,7 @@ public abstract class CompetitionAuto extends OpMode {
         intake.setRamp(Intake.Ramp.STOW);
         hive.reset();
         ledger.reset();
+        ledgerCell = hive.upCell(alliance);
         MatchState.lastPose = null;
     }
 
@@ -164,6 +171,23 @@ public abstract class CompetitionAuto extends OpMode {
         double inStep = now - stepStart;
         if (left <= 0.2 && step != Step.DONE) enter(Step.DONE);
 
+        // Facing the HIVE (lining up, shooting, checking a tip): watch the tags.
+        if (step == Step.AIM || step == Step.FEED || step == Step.CONFIRM_TIP) {
+            vision.lookAtHive(alliance, pose.getX(), pose.getY(), pose.getHeading());
+            vision.observeHive(hive, pose.getHeading());
+            double[] c = TagLocalizer.correct(pose.getX(), pose.getY(), vision.lastFix(),
+                    Math.hypot(vel.getXComponent(), vel.getYComponent()), Math.toDegrees(follower.getAngularVelocity()));
+            if (c != null) {
+                follower.setPose(new Pose(c[0], c[1], pose.getHeading()));
+                tagFixes++;
+            }
+        }
+        // Any change of the up CELL (our tip, a partner's, or assumed) restarts the count.
+        if (hive.upCell(alliance) != ledgerCell) {
+            ledgerCell = hive.upCell(alliance);
+            ledger.tipped();
+        }
+
         switch (step) {
             case DELAY:
                 if (inStep >= delayS) enter(Step.PLAN);
@@ -198,7 +222,6 @@ public abstract class CompetitionAuto extends OpMode {
                     ledger.shot(burst, 0);
                     if (ledger.tipExpected()) {
                         upBeforeTip = hive.upCell(alliance);
-                        vision.lookAtHive(alliance, pose.getX(), pose.getY(), pose.getHeading());
                         enter(Step.CONFIRM_TIP);
                     } else {
                         enter(Step.PLAN);
@@ -207,12 +230,9 @@ public abstract class CompetitionAuto extends OpMode {
                 break;
 
             case CONFIRM_TIP: {
-                vision.lookAtHive(alliance, pose.getX(), pose.getY(), pose.getHeading());
-                vision.observeHive(hive);
-                boolean seenFlip = hive.upCell(alliance) != upBeforeTip;
+                boolean seenFlip = hive.upCell(alliance) != upBeforeTip;   // tags watched above
                 if (seenFlip || inStep > AutoTuning.TIP_CONFIRM_S) {
-                    if (!seenFlip) hive.tipped(alliance);  // assume it went
-                    ledger.tipped();
+                    if (!seenFlip) hive.tipped(alliance);  // assume it went (ledger restarts above)
                     note = seenFlip ? "tip CONFIRMED by tags" : "tip ASSUMED (tags not seen)";
                     vision.lookForBalls(0);
                     enter(Step.PLAN);
@@ -286,6 +306,7 @@ public abstract class CompetitionAuto extends OpMode {
         telemetry.addData("Our up CELL", "%s, fill ~%.1f, %d more to tip", hive.upCell(alliance), ledger.fill(), ledger.pollenToTip());
         telemetry.addData("Shot", aim.status);
         telemetry.addData("Note", note);
+        telemetry.addData("Tag position fixes", tagFixes);
         telemetry.addData("Pose", "x %.1f  y %.1f  h %.0f", pose.getX(), pose.getY(), Math.toDegrees(pose.getHeading()));
         telemetry.update();
     }

@@ -5,7 +5,7 @@ The Limelight sits on pan/tilt servos and does two jobs, one at a time:
 | Mode | Pipeline slot | Camera points | Gives |
 |---|---|---|---|
 | **Balls** | 0, Python (`TeamCode/src/main/assets/limelight/ball_pipeline.py`) | down, ahead of the intake | every POLLEN / red NECTAR / blue NECTAR, located on the field |
-| **Tags** | 1, AprilTag (36h11) | up at our HIVE | which CELL is up (the visible tag cluster is the up CELL) |
+| **Tags** | 1, AprilTag (36h11) | up at our HIVE | which CELL is up (the visible tag cluster is the up CELL), and a correction to the robot's position |
 
 Code: `subsystems/Vision` (gimbal + pipelines), `vision/` (locating and
 picking balls). Settings: `config/LimelightMount` (position, servo
@@ -19,7 +19,9 @@ calibration) and `tuning/VisionTuning`.
 2. **Limelight web page** (http://limelight.local:5801 with the laptop on
    the robot's network, or over USB):
    - **Slot 0:** set the pipeline type to **Python**.
-   - **Slot 1:** set the type to **Fiducial / AprilTag**, family **36h11**.
+   - **Slot 1:** set the type to **Fiducial / AprilTag**, family **36h11**,
+     tag size **82.55 mm** (3.25 in). The size is what makes the tag
+     distances right.
 3. **Upload the ball pipeline:** run **Limelight Setup** (Testing group).
    Re-run it whenever `ball_pipeline.py` changes.
 
@@ -42,8 +44,36 @@ calibration) and `tuning/VisionTuning`.
 5. **Tags:**
    - Press **Y**. The camera should point at our HIVE and show the up
      CELL's tags.
-   - Set `VisionTuning.CELL_TAG_HEIGHT_IN` to the measured height of the
-     tag cluster.
+   - Measure the tag row's height under an up CELL. Put it in
+     `field/CellTags.TAG_HEIGHT_IN`, with the row's offset in `TAG_ROW_Y_OFFSET_IN`.
+6. **Position correction:** in tag mode, telemetry shows **Tag fix** and
+   how far it is from odometry.
+   - Parked still, it should agree within about 2 in.
+   - **X** turns on applying the fixes.
+   - If the fix never appears while tags are visible, the 4 tags disagree.
+     The tag order in `CellTags` (taken from the setup guide figure) or
+     the tag size is probably wrong.
+
+## Position correction from the CELL tags
+
+The tags move when the HIVE tips, but in each stable state they're in a
+known place, and the visible cluster tells us which state it is. Each
+tag's camera-space position, the gimbal angles and the gyro heading give
+the robot's x/y (`vision/TagLocalizer`).
+
+**A fix is used only when:**
+- all the tags in the frame agree within `MAX_TAG_SPREAD_IN`, and each
+  is at the right height
+- the robot is nearly still and the tags are close enough
+- the fix isn't a wild jump from odometry (`TAG_MAX_JUMP_IN`)
+
+Odometry then moves `TAG_GAIN` of the way toward the fix.
+
+**When it runs:**
+- TeleOp keeps the camera on our HIVE all match. It tracks the up CELL
+  and corrects position.
+- Auto watches the tags while lining up and shooting. That's also how it
+  notices a tip, ours or our partner's.
 
 ## How balls are judged
 

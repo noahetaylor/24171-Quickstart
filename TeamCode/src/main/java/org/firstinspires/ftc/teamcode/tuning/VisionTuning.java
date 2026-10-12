@@ -9,11 +9,6 @@ public final class VisionTuning {
 
     /** Camera tilt while looking for balls (negative = down). */
     public static double BALL_TILT_DEG = -30;
-    /**
-     * Height of the tag cluster under an UP cell (inches). The camera tilts
-     * up to it based on distance. ESTIMATE: measure on a real HIVE.
-     */
-    public static double CELL_TAG_HEIGHT_IN = 45;
 
     /** Ignore balls farther than this (inches along the floor). */
     public static double MAX_BALL_RANGE_IN = 90;
@@ -24,4 +19,19 @@ public final class VisionTuning {
     public static double OWN_SIDE_MARGIN_IN = 10;
     /** Turning costs this many inches of driving per 90 degrees when choosing a ball. */
     public static double TURN_COST_IN_PER_90 = 12;
+
+    // AprilTag position correction (TagLocalizer)
+    /** Fraction of the way to move odometry toward each tag fix (0 = off). */
+    public static double TAG_GAIN = 0.3;
+    /** Ignore fixes this far from odometry (a misread, or the wrong CELL state). */
+    public static double TAG_MAX_JUMP_IN = 12;
+    /** Only correct while nearly still. */
+    public static double TAG_MAX_SPEED_IN_S = 15;
+    public static double TAG_MAX_TURN_DEG_S = 30;
+    /** Ignore tags farther than this (floor distance). */
+    public static double TAG_MAX_RANGE_IN = 110;
+    /** Per-tag fixes in one frame must agree within this. */
+    public static double MAX_TAG_SPREAD_IN = 3;
+    /** A tag's measured height must match CellTags.TAG_HEIGHT_IN within this. */
+    public static double MAX_TAG_HEIGHT_ERR_IN = 8;
 }
