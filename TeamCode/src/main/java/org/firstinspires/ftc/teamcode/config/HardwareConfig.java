@@ -99,6 +99,9 @@ public final class HardwareConfig {
     public static final String LIMELIGHT_TILT = "limelightTilt";   // EH servo 3
     // EH servos 4, 5: reserved for the hood servos; CH servos 0, 1: turret yaw.
 
+    /** Limelight 3A (USB, Control Hub). Mount + servo calibration: config/LimelightMount. */
+    public static final String LIMELIGHT = "limelight";
+
     /** Positive power must: pull balls IN / move balls UP toward the flywheels. Flip if not. */
     public static final DcMotorSimple.Direction INTAKE_DIR = DcMotorSimple.Direction.FORWARD;
     public static final DcMotorSimple.Direction TRANSFER_DIR = DcMotorSimple.Direction.FORWARD;
