@@ -50,7 +50,9 @@ a PR as they're done.
 - [ ] Lens position measured into `config/LimelightMount`
 - [ ] A ball on a known spot is located within ~2 in
 - [ ] HSV ranges tuned under event-like lighting (`ball_pipeline.py`)
-- [ ] Tag mode sees the up CELL; `CELL_TAG_HEIGHT_IN` measured
+- [ ] Tag mode sees the up CELL; tag height / row offset measured into `field/CellTags`
+- [ ] Tag order matches `CellTags` (a Tag fix appears with 2+ tags in view)
+- [ ] Tag fix agrees with odometry within ~2 in when parked; turn on corrections
 
 ## 6. Competition TeleOp ([driver-controls.md](driver-controls.md))
 - [ ] Hold right trigger: turns onto the CELL and fires once both flywheels

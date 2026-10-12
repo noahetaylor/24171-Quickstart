@@ -15,6 +15,7 @@ import org.firstinspires.ftc.teamcode.subsystems.RobotHardware;
 import org.firstinspires.ftc.teamcode.subsystems.Vision;
 import org.firstinspires.ftc.teamcode.vision.BallPicker;
 import org.firstinspires.ftc.teamcode.vision.BallSighting;
+import org.firstinspires.ftc.teamcode.vision.TagLocalizer;
 
 import java.util.List;
 
@@ -26,6 +27,7 @@ import java.util.List;
  *   A          ball mode (camera down)      Y   tag mode (camera points at our HIVE)
  *   d-pad      nudge pan (left/right) and tilt (up/down) by 2 deg
  *   back       re-center (pan 0, ball tilt)
+ *   X          (tag mode) apply tag position fixes to odometry on/off
  *   sticks     drive (robot-centric)
  *
  * Calibrating the servos (config/LimelightMount): watch the camera image on
@@ -43,6 +45,7 @@ public class LimelightCheck extends OpMode {
     private Alliance alliance = Alliance.RED;
     private double pan = 0, tilt = 0;
     private final boolean[] last = new boolean[8];
+    private boolean applyFixes = false;
 
     @Override
     public void init() {
@@ -88,6 +91,7 @@ public class LimelightCheck extends OpMode {
             pan = vision.panDeg();
             tilt = vision.tiltDeg();
         }
+        if (pressed(7, gamepad1.x)) applyFixes = !applyFixes;
         if (pressed(2, gamepad1.dpad_left)) pan += 2;
         if (pressed(3, gamepad1.dpad_right)) pan -= 2;
         if (pressed(4, gamepad1.dpad_up)) tilt += 2;
@@ -104,9 +108,21 @@ public class LimelightCheck extends OpMode {
             telemetry.addData("Balls", balls.size());
             for (BallSighting b : balls) telemetry.addLine("  " + b + (b == pick ? "   <- would go for this" : ""));
         } else {
-            List<Cell> seen = vision.observeHive(hive);
+            List<Cell> seen = vision.observeHive(hive, pose.getHeading());
             telemetry.addData("CELL tags seen", seen.isEmpty() ? "none" : seen.toString());
             telemetry.addData("Our up CELL", hive.upCell(alliance));
+            TagLocalizer.Fix fix = vision.lastFix();
+            if (fix != null) {
+                telemetry.addData("Tag fix", "x %.1f  y %.1f  (%d tags, %.0f in)  off by %.1f in",
+                        fix.x, fix.y, fix.tags, fix.rangeIn, Math.hypot(fix.x - pose.getX(), fix.y - pose.getY()));
+                if (applyFixes) {
+                    double[] c = TagLocalizer.correct(pose.getX(), pose.getY(), fix, 0, 0);
+                    if (c != null) follower.setPose(new Pose(c[0], c[1], pose.getHeading()));
+                }
+            } else {
+                telemetry.addData("Tag fix", "none (no tags, or they disagree)");
+            }
+            telemetry.addData("Apply fixes (X)", applyFixes);
         }
         telemetry.addData("Pipelines", "balls = %d, tags = %d", LimelightMount.BALL_PIPELINE, LimelightMount.TAG_PIPELINE);
         telemetry.update();
