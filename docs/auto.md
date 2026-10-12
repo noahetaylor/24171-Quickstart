@@ -20,45 +20,40 @@ Load **4 POLLEN**. Place the robot's center on the spot shown.
 
 ### Partner page: keep out of our partner's way
 
-Before each match, ask your partner where their Auto drives and mark
-those tiles. The grid is drawn **as your drive team sees the field from
-its own wall**: your nearest column at the bottom, your left on the left.
+**Before the match, on the laptop:** open
+`tools/partner-planner/Partner Planner.bat`.
 
-```
-far wall <--          --> audience
-C  .  .  .  .  .  .
-B  .  .  #  #  .  .
-A  . [.] .  1  1  .
-      (our wall / drive team)
-```
+1. Pick **RED** or **BLUE**. Our half is shaded.
+2. Ask your partner where their Auto drives, and when.
+3. Drag on the field to draw each zone. Set its time window with
+   **whole / 0–10 / 10–20 / 20–30**, or type the seconds. The slider at
+   the bottom shows which zones are active at any moment.
+4. Name the plan after the partner (e.g. `14250 left push`) and **Save**.
+   Plans are kept in `data/partner-plans/`, so commit them and reuse them
+   when you meet that team again.
+5. In the pit or queue, put the laptop on the robot's Wi-Fi (or plug in
+   USB) and click **Send to robot**. Disconnect before the match (R704).
 
-| Button | Does |
-|---|---|
-| D-pad | Move the cursor |
-| A | Cycle the tile: `.` free → `#` whole Auto → `1` 0–10 s → `2` 10–20 s → `3` 20–30 s |
-| B | Clear all |
+**On the Driver Hub:** Auto INIT → **BACK** → d-pad left/right picks the
+plan, or *none*. The grid preview is drawn as your drive team sees the
+field from its own wall:
+- `#` = a tile marked for the whole Auto
+- `1` / `2` / `3` = 0–10 / 10–20 / 20–30 s
+- `+` = part of the tile is in a zone
 
-**While a tile is marked, Auto won't:**
+**Last-minute fallback:** press **X** to mark whole tiles right there
+(d-pad cursor, **A** cycles, **B** clears).
+
+**While a zone is in use, Auto won't:**
 - chase a ball in it
 - chase a ball whose straight path crosses it
 - pick a shot spot in it, or drive through it to one
-- run the garden, if the garden is in a marked tile
+- run the garden, if the garden is in it
 
-A robot-sized margin is kept around marked tiles
-(`PartnerPlan.MARGIN_IN`). Starting inside one is fine: the robot is
-allowed to drive out.
-
-The plan **stays set until you change it**. The setup page shows how
-many tiles are marked, so check it every match: partners change. It's
-the same plan for red or blue, drawn from your own side.
-
-Start spots are placeholders until the team picks real ones. They're in
-`auto/StartSpot.java`, and a unit test checks every spot against G304:
-- our side
-- touching a wall
-- not in the LOADING ZONE
-- not touching a FLOWER
-- not on the garden
+A robot-sized margin is kept around zones (`PartnerPlan.MARGIN_IN`).
+Starting inside a zone is fine: the robot is allowed to drive out. The
+chosen plan stays selected between matches, and the setup page shows its
+name, so check it every match.
 
 ## What it does
 

@@ -19,6 +19,7 @@ All code is under `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/`.
 | Run a match | Driver Hub group **Competition**: Red/Blue Auto, Red/Blue TeleOp (`opmodes/competition/`). Controls: [docs/driver-controls.md](docs/driver-controls.md). Auto: [docs/auto.md](docs/auto.md) |
 | Test something or gather data | Driver Hub group **Testing** (`opmodes/testing/`) |
 | Change a number we tuned from testing (shot table, rpm, aim) | `tuning/` (also editable live from Panels in the pit) |
+| Plan around our partner's Auto | Laptop: `tools/partner-planner/Partner Planner.bat`, then pick the plan in Auto's INIT. Steps: [docs/auto.md](docs/auto.md) |
 | Tune the shot tables from real shots | Robot: **Shot Tuner** (Testing). Laptop: `tools/shot-table-editor/Shot Table Editor.bat`. Steps: [docs/shot-model.md](docs/shot-model.md) |
 | Change a hardware name or the odometry pod layout | `config/` (pods: the Pod Placer tool, `tools/pod-placer/`) |
 | See what still needs checking on the robot | [docs/robot-checklist.md](docs/robot-checklist.md) |
