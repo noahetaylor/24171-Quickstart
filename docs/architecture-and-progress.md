@@ -37,14 +37,14 @@ Current files (`TeamCode/src/main/java/org/firstinspires/ftc/teamcode/`):
 - Pinned at v2.1.2 in `build.dependencies.gradle`.
 - Workflow: draw + export paths at https://visualizer.pedropathing.com/,
   paste the generated `Paths` class body into `AutoTemplate.java`.
-- **Known gap:** the real Quickstart's `Constants.java`
-  (`pedroPathing/Constants.java`) is currently a stub — no
-  `.mecanumDrivetrain(...)` call, no localizer configured. It compiles
-  fine, but `Follower.followPath()` would have nothing to actually drive
-  or localize against yet. This needs real drivetrain motor names/
-  directions and a chosen localizer (see odometry note below) once the
-  robot physically exists. Not a bug — expected for a robot that doesn't
-  exist yet, just don't be surprised by it later.
+- `Constants.java` is configured (Oct 2026): mecanum drivetrain + the
+  **two-wheel localizer** (2 goBILDA 4-Bar pods + Control Hub IMU). All
+  names, directions, and pod measurements live in
+  `config/HardwareConfig.java`, which `RobotHardware` also reads, so TeleOp
+  and Pedro can't disagree. Wiring: `docs/port-map.md`. Bring-up steps:
+  `docs/odometry-setup.md` (starts with our `OdometryCheck` OpMode).
+- Still Pedro defaults until tuned on the robot: pod ticks-per-inch
+  (goBILDA spec value), drivetrain velocities, PIDF.
 
 ## virtual_robot (simulator) testing
 
@@ -73,10 +73,9 @@ Current files (`TeamCode/src/main/java/org/firstinspires/ftc/teamcode/`):
 
 ## Open questions for build team / fall
 
-- **Odometry approach not finalized:** REV parts inventory has Through
-  Bore Encoders but no dedicated odometry pod hardware, and no goBILDA
-  Pinpoint (which the sim's example Pedro config assumes). Need to decide
-  actual localization method before setting real `Constants.java` values.
+- ~~Odometry approach not finalized~~ — decided: two goBILDA 4-Bar pods
+  + IMU (two-wheel localizer). The sim's StpBot still models 3-pod
+  odometry and its example config a Pinpoint; neither matches the robot.
 - **Shared Control Hub:** inventory shows only 1 Control Hub across both
   teams in the club — a scheduling/ordering conversation, not a code
   problem, but worth raising early.
