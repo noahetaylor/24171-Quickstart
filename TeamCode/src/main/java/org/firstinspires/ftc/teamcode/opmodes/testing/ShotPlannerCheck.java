@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.opmodes.testing;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
@@ -11,7 +11,7 @@ import org.firstinspires.ftc.teamcode.field.HiveState;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.shooting.ShotPlanner;
 import org.firstinspires.ftc.teamcode.shooting.ShotSolution;
-import org.firstinspires.ftc.teamcode.shooting.ShotTables;
+import org.firstinspires.ftc.teamcode.tuning.ShotTables;
 import org.firstinspires.ftc.teamcode.shooting.Shooter;
 
 /**
@@ -25,7 +25,7 @@ import org.firstinspires.ftc.teamcode.shooting.Shooter;
  * RUN: drive with the sticks. Y = our HIVE tipped, A = reset HIVEs to the
  * match-start state.
  */
-@TeleOp(name = "Shot Planner Check")
+@TeleOp(name = "Shot Planner Check", group = "Testing")
 public class ShotPlannerCheck extends OpMode {
 
     /** Start spot: robot center, Pedro coordinates. Default = middle of tile D1. */

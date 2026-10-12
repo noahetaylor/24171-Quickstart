@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.opmodes.examples;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -12,7 +12,7 @@ import org.firstinspires.ftc.teamcode.subsystems.RobotHardware;
  * subsystem, initialize it off RobotHardware in init(), call its methods
  * from gamepad input in loop().
  */
-@TeleOp(name = "TeleOp Template")
+@TeleOp(name = "TeleOp Template", group = "Examples")
 public class TeleOpTemplate extends OpMode {
 
     private RobotHardware hardware;

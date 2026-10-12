@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode.shooting;
 import org.firstinspires.ftc.teamcode.field.Alliance;
 import org.firstinspires.ftc.teamcode.field.FieldPoint;
 import org.firstinspires.ftc.teamcode.field.HiveState;
+import org.firstinspires.ftc.teamcode.tuning.AimTuning;
+import org.firstinspires.ftc.teamcode.tuning.ShooterTuning;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,20 +24,20 @@ public class ShotPlannerTest {
 
     @Before
     public void saveTunables() {
-        yaw = Shooter.LAUNCH_YAW_DEG;
-        hoodMin = Shooter.HOOD_MIN_DEG;
-        hoodMax = Shooter.HOOD_MAX_DEG;
-        eff = Shooter.EXIT_EFFICIENCY;
-        maxRpm = Shooter.MAX_RPM;
+        yaw = ShooterTuning.LAUNCH_YAW_DEG;
+        hoodMin = ShooterTuning.HOOD_MIN_DEG;
+        hoodMax = ShooterTuning.HOOD_MAX_DEG;
+        eff = ShooterTuning.EXIT_EFFICIENCY;
+        maxRpm = ShooterTuning.MAX_RPM;
     }
 
     @After
     public void restoreTunables() {
-        Shooter.LAUNCH_YAW_DEG = yaw;
-        Shooter.HOOD_MIN_DEG = hoodMin;
-        Shooter.HOOD_MAX_DEG = hoodMax;
-        Shooter.EXIT_EFFICIENCY = eff;
-        Shooter.MAX_RPM = maxRpm;
+        ShooterTuning.LAUNCH_YAW_DEG = yaw;
+        ShooterTuning.HOOD_MIN_DEG = hoodMin;
+        ShooterTuning.HOOD_MAX_DEG = hoodMax;
+        ShooterTuning.EXIT_EFFICIENCY = eff;
+        ShooterTuning.MAX_RPM = maxRpm;
     }
 
     // ------------------------------------------------------------ physics
@@ -96,7 +98,7 @@ public class ShotPlannerTest {
     private static double missDistance(double robotX, double robotY, ShotSolution s,
                                        Shooter sh, FieldPoint target) {
         double[] p = ShotPlanner.releasePoint(robotX, robotY, s.aimHeadingRad, sh);
-        double dir = s.aimHeadingRad + Math.toRadians(Shooter.LAUNCH_YAW_DEG);
+        double dir = s.aimHeadingRad + Math.toRadians(ShooterTuning.LAUNCH_YAW_DEG);
         double dx = target.x - p[0], dy = target.y - p[1];
         return Math.abs(Math.cos(dir) * dy - Math.sin(dir) * dx);
     }
@@ -112,7 +114,7 @@ public class ShotPlannerTest {
 
     @Test
     public void aimingWorksWhenShootingOutTheBack() {
-        Shooter.LAUNCH_YAW_DEG = 180;
+        ShooterTuning.LAUNCH_YAW_DEG = 180;
         FieldPoint target = new HiveState().target(Alliance.BLUE);
         ShotSolution s = ShotPlanner.plan(110, 30, 0, target, Shooter.NECTAR, null);
         assertEquals(0, missDistance(110, 30, s, Shooter.NECTAR, target), 1e-6);
@@ -137,7 +139,7 @@ public class ShotPlannerTest {
         assertSame(ShotSolution.Source.PHYSICS, s.source);
         assertTrue(s.toString(), s.feasible);
         assertEquals(60, s.hoodDeg, EPS);
-        assertTrue(s.rpm > 1000 && s.rpm < Shooter.MAX_RPM);
+        assertTrue(s.rpm > 1000 && s.rpm < ShooterTuning.MAX_RPM);
         assertEquals(53.5 - Shooter.POLLEN.releaseHeightIn, s.riseIn, EPS);
     }
 
@@ -151,7 +153,7 @@ public class ShotPlannerTest {
 
     @Test
     public void overMaxRpmIsNotFeasible() {
-        Shooter.MAX_RPM = 100;
+        ShooterTuning.MAX_RPM = 100;
         ShotSolution s = ShotPlanner.plan(10, 10, 0, new FieldPoint(130, 130, 53.5), Shooter.POLLEN, null);
         assertFalse(s.feasible);
     }
@@ -170,8 +172,8 @@ public class ShotPlannerTest {
 
     @Test
     public void adjustableHoodPicksTheLowSpeedAngleWithinRange() {
-        Shooter.HOOD_MIN_DEG = 50;
-        Shooter.HOOD_MAX_DEG = 70;
+        ShooterTuning.HOOD_MIN_DEG = 50;
+        ShooterTuning.HOOD_MAX_DEG = 70;
         FieldPoint target = new FieldPoint(72, 120, 53.5);
         ShotSolution s = ShotPlanner.plan(72, 40, 0, target, Shooter.POLLEN, null);
         assertTrue(s.hoodDeg >= 50 && s.hoodDeg <= 70);

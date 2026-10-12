@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.shooting;
 
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.field.FieldPoint;
+import org.firstinspires.ftc.teamcode.tuning.ShooterTuning;
 
 /**
  * Where to point and how hard to shoot, from a robot pose (Pedro field
@@ -19,7 +20,7 @@ public final class ShotPlanner {
 
     public static ShotSolution plan(double robotX, double robotY, double robotHeadingRad,
                                     FieldPoint target, Shooter shooter, ShotTable table) {
-        double yaw = Math.toRadians(Shooter.LAUNCH_YAW_DEG);
+        double yaw = Math.toRadians(ShooterTuning.LAUNCH_YAW_DEG);
 
         // Aim: the launch ray from the release point must pass through the
         // target. The release point moves as the robot turns, so iterate
@@ -46,9 +47,9 @@ public final class ShotPlanner {
         }
 
         double angle = Shooter.hoodIsFixed()
-                ? Math.toRadians(Shooter.HOOD_MIN_DEG)
+                ? Math.toRadians(ShooterTuning.HOOD_MIN_DEG)
                 : clamp(ShotPhysics.minSpeedAngle(d, h),
-                        Math.toRadians(Shooter.HOOD_MIN_DEG), Math.toRadians(Shooter.HOOD_MAX_DEG));
+                        Math.toRadians(ShooterTuning.HOOD_MIN_DEG), Math.toRadians(ShooterTuning.HOOD_MAX_DEG));
         double hoodDeg = Math.toDegrees(angle);
         double v = ShotPhysics.speedFor(d, h, angle);
         if (Double.isNaN(v)) {
@@ -56,7 +57,7 @@ public final class ShotPlanner {
                     false, "too close for this hood angle", ShotSolution.Source.PHYSICS);
         }
         double rpm = shooter.rpmForSpeed(v);
-        boolean ok = rpm <= Shooter.MAX_RPM;
+        boolean ok = rpm <= ShooterTuning.MAX_RPM;
         return new ShotSolution(heading, turn, d, h, hoodDeg, rpm,
                 ShotPhysics.timeOfFlight(d, v, angle), ShotPhysics.descendingAt(d, v, angle),
                 ok, ok ? "" : "needs more than MAX_RPM", ShotSolution.Source.PHYSICS);

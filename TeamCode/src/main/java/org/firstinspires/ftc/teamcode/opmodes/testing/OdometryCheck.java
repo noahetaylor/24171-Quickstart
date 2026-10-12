@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.opmodes.testing;
 
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -30,7 +30,7 @@ import org.firstinspires.ftc.teamcode.subsystems.RobotHardware;
  *
  * Back resets the pod and heading readouts to zero.
  */
-@TeleOp(name = "Odometry Check", group = "Setup")
+@TeleOp(name = "Odometry Check", group = "Testing")
 public class OdometryCheck extends OpMode {
     private static final double SPIN_TEST_POWER = 0.3;
 

@@ -23,20 +23,28 @@ Adding a new mechanism (e.g. a shooter) later means: add its device(s) to
 shape, wire it into the relevant OpMode(s). Nothing existing needs
 restructuring — this was the point of the refactor.
 
-Current files (`TeamCode/src/main/java/org/firstinspires/ftc/teamcode/`):
-- `subsystems/RobotHardware.java`
-- `subsystems/Drivetrain.java` — robot-centric mecanum driving only so far;
-  field-centric intentionally deferred (team decision — simpler to start,
-  can add as a second method later without touching existing code)
-- `AutoTemplate.java` — swap-point-based autonomous skeleton (see file
-  comments: swap starting pose + `Paths` class body per autonomous)
-- `TeleOpTemplate.java` — minimal TeleOp using the subsystem pattern
+Current files (`TeamCode/src/main/java/org/firstinspires/ftc/teamcode/`).
+The README's "Where things are" section has the short version.
+- `opmodes/competition/` — Red/Blue Auto and TeleOp (Driver Hub group
+  "Competition")
+- `opmodes/testing/` — testing and data-gathering OpModes (group "Testing")
+- `opmodes/examples/` — `AutoTemplate` (swap-point Pedro auto skeleton) and
+  `TeleOpTemplate` (minimal subsystem TeleOp)
+- `tuning/` — every number tuned from testing (shot tables, shooter and
+  aim settings), editable live from Panels in the pit
+- `config/` — physical facts: hardware names, odometry pod layout
+- `field/` — field model (positions, alliance conversion, HIVE state);
+  `docs/field-model.md`
+- `shooting/` — shot planner + auto-aim logic; `docs/shot-model.md`
+- `subsystems/RobotHardware.java`, `subsystems/Drivetrain.java` —
+  robot-centric mecanum driving only so far
+- `replay/` — record-and-replay framework
 
 ## Pedro Pathing status
 
 - Pinned at v2.1.2 in `build.dependencies.gradle`.
 - Workflow: draw + export paths at https://visualizer.pedropathing.com/,
-  paste the generated `Paths` class body into `AutoTemplate.java`.
+  paste the generated `Paths` class body into `opmodes/examples/AutoTemplate.java`.
 - `Constants.java` is configured (Oct 2026): mecanum drivetrain + the
   **two-wheel localizer** (2 goBILDA 4-Bar pods + Control Hub IMU). All
   names, directions, and pod measurements live in
@@ -92,5 +100,8 @@ Current files (`TeamCode/src/main/java/org/firstinspires/ftc/teamcode/`):
    Discrete actions tagged to position/time as events. Building the
    framework (data format, event system, path reconstruction) robot-free
    this summer; wiring to real odometry recording is a fall task.
-4. Fall: SDK bump for the real season, real field map, game-specific
-   mechanisms, resolve odometry/localizer choice, real hardware config.
+4. ✅ SDK 12.0, odometry config (unverified on robot), field model, shot
+   model, auto-aim (Oct 2026)
+5. ⏳ Mechanism subsystems (intake, transfer, shooters), Red/Blue
+   competition OpModes, shot data logging + table editor
+6. Auto routines, ball vision, partner planner

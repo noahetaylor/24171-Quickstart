@@ -1,4 +1,7 @@
-package org.firstinspires.ftc.teamcode.shooting;
+package org.firstinspires.ftc.teamcode.tuning;
+
+import org.firstinspires.ftc.teamcode.shooting.ShotTable;
+import org.firstinspires.ftc.teamcode.shooting.Shooter;
 
 /**
  * THE PLACE TO TUNE SHOTS. One table per shooter: distance (inches, from the

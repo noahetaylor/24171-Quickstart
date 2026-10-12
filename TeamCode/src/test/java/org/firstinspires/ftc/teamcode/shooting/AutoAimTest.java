@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.shooting;
 
 import org.firstinspires.ftc.teamcode.field.FieldPoint;
+import org.firstinspires.ftc.teamcode.tuning.AimTuning;
+import org.firstinspires.ftc.teamcode.tuning.ShooterTuning;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -20,14 +22,14 @@ public class AutoAimTest {
 
     @Before
     public void save() {
-        latency = Shooter.FIRE_LATENCY_S;
-        lead = AutoAim.LEAD_MOVING_SHOTS;
+        latency = ShooterTuning.FIRE_LATENCY_S;
+        lead = AimTuning.LEAD_MOVING_SHOTS;
     }
 
     @After
     public void restore() {
-        Shooter.FIRE_LATENCY_S = latency;
-        AutoAim.LEAD_MOVING_SHOTS = lead;
+        ShooterTuning.FIRE_LATENCY_S = latency;
+        AimTuning.LEAD_MOVING_SHOTS = lead;
     }
 
     /** The aim heading and rpm for a still robot at (X, Y). */
@@ -62,9 +64,9 @@ public class AutoAimTest {
     @Test
     public void turnPowerIsClampedAndHasAFloor() {
         ShotSolution s = still();
-        assertEquals(AutoAim.TURN_MAX, at(s.aimHeadingRad - Math.PI / 2, 0, s.rpm).turnPower, 1e-9);
+        assertEquals(AimTuning.TURN_MAX, at(s.aimHeadingRad - Math.PI / 2, 0, s.rpm).turnPower, 1e-9);
         double small = at(s.aimHeadingRad - Math.toRadians(1.5), 0, s.rpm).turnPower;
-        assertTrue(small >= AutoAim.TURN_MIN);
+        assertTrue(small >= AimTuning.TURN_MIN);
     }
 
     @Test
@@ -77,7 +79,7 @@ public class AutoAimTest {
 
     @Test
     public void firesEarlyWhenTheSwingWillLandOnTarget() {
-        Shooter.FIRE_LATENCY_S = 0.15;
+        ShooterTuning.FIRE_LATENCY_S = 0.15;
         ShotSolution s = still();
         // 3 deg short (outside the 2 deg tolerance) but turning 20 deg/s toward it:
         // in 0.15 s it will be on target.
@@ -93,7 +95,7 @@ public class AutoAimTest {
     public void doesNotFireWhileSpinningFastThroughTheTarget() {
         ShotSolution s = still();
         double omega = Math.toRadians(90);
-        double heading = s.aimHeadingRad - omega * Shooter.FIRE_LATENCY_S;  // on target at release
+        double heading = s.aimHeadingRad - omega * ShooterTuning.FIRE_LATENCY_S;  // on target at release
         AutoAim.Command c = at(heading, omega, s.rpm);
         assertSame(AutoAim.Status.TURNING, c.status);
     }
@@ -118,17 +120,17 @@ public class AutoAimTest {
     @Test
     public void movingShotIsLeadSoTheBallStillArrives() {
         double vx = 30; // sliding toward the blue wall
-        AutoAim.LEAD_MOVING_SHOTS = true;
+        AimTuning.LEAD_MOVING_SHOTS = true;
         AutoAim.Command c = AutoAim.update(X, Y, Math.PI / 2, vx, 0, 0, 3000,
                 TARGET, Shooter.POLLEN, null);
-        AutoAim.LEAD_MOVING_SHOTS = false;
+        AimTuning.LEAD_MOVING_SHOTS = false;
         AutoAim.Command plain = AutoAim.update(X, Y, Math.PI / 2, vx, 0, 0, 3000,
                 TARGET, Shooter.POLLEN, null);
         // Leading aims back against the slide: further CCW (left) than not leading.
         assertTrue(c.shot.aimHeadingRad > plain.shot.aimHeadingRad);
 
         // Fly the led shot: release point + (launch velocity + robot velocity) * t.
-        double lat = Shooter.FIRE_LATENCY_S;
+        double lat = ShooterTuning.FIRE_LATENCY_S;
         double[] p = ShotPlanner.releasePoint(X + vx * lat, Y, c.shot.aimHeadingRad, Shooter.POLLEN);
         double a = Math.toRadians(c.shot.hoodDeg);
         double v = Shooter.POLLEN.speedForRpm(c.shot.rpm);
