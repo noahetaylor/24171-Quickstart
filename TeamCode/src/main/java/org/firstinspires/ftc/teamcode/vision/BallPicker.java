@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.vision;
 
 import org.firstinspires.ftc.teamcode.field.Alliance;
+import org.firstinspires.ftc.teamcode.field.Blocker;
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.shooting.ShotSpots;
 import org.firstinspires.ftc.teamcode.tuning.VisionTuning;
@@ -11,7 +12,8 @@ import java.util.List;
  * Chooses which ball to go get: one we're allowed and want (POLLEN, or
  * NECTAR of our color), on our half of the field in Auto (crossing can be
  * a major foul), reachable (not against a wall, not under the HIVE frame),
- * and cheapest to reach counting the turn.
+ * not in a blocked area (partner plan), and cheapest to reach counting
+ * the turn.
  *
  * Pure logic, unit-tested in BallPickerTest.
  */
@@ -40,12 +42,19 @@ public final class BallPicker {
      */
     public static BallSighting pick(List<BallSighting> balls, Alliance a, boolean ownSideOnly,
                                     double robotX, double robotY, double robotHeadingRad) {
+        return pick(balls, a, ownSideOnly, robotX, robotY, robotHeadingRad, Blocker.NONE);
+    }
+
+    /** Same, also skipping balls in (or behind) blocked areas, e.g. our partner's Auto tiles. */
+    public static BallSighting pick(List<BallSighting> balls, Alliance a, boolean ownSideOnly,
+                                    double robotX, double robotY, double robotHeadingRad, Blocker blocker) {
         BallSighting best = null;
         double bestCost = Double.MAX_VALUE;
         for (BallSighting b : balls) {
             if (!b.kind.wantedBy(a)) continue;
             if (ownSideOnly && !onOurSide(a, b.x)) continue;
             if (!reachable(b.x, b.y)) continue;
+            if (blocker.pointBlocked(b.x, b.y) || blocker.segmentBlocked(robotX, robotY, b.x, b.y)) continue;
             double dist = Math.hypot(b.x - robotX, b.y - robotY);
             double turn = Math.abs(Field.normalizeRadians(Math.atan2(b.y - robotY, b.x - robotX) - robotHeadingRad));
             double cost = dist + VisionTuning.TURN_COST_IN_PER_90 * turn / (Math.PI / 2);

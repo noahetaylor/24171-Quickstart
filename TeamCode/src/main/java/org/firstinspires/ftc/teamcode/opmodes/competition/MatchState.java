@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.opmodes.competition;
 
 import com.pedropathing.geometry.Pose;
 
+import org.firstinspires.ftc.teamcode.auto.PartnerPlan;
 import org.firstinspires.ftc.teamcode.field.Alliance;
 import org.firstinspires.ftc.teamcode.field.HiveState;
 
@@ -15,6 +16,8 @@ public final class MatchState {
     /** Set by Auto as it ends; null if no Auto ran since the app started. */
     public static Pose lastPose = null;
     public static final HiveState hive = new HiveState();
+    /** Set in Auto's INIT (partner page). Kept until changed: check it every match. */
+    public static final PartnerPlan partnerPlan = new PartnerPlan();
 
     /**
      * Where TeleOp assumes the robot is if no Auto ran (practice). Written

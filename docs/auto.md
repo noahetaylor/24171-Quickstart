@@ -6,6 +6,10 @@ rotated for blue.
 
 ## INIT choices (gamepad 1)
 
+Two pages. **BACK** switches between them.
+
+### Setup page
+
 | Button | Choice |
 |---|---|
 | D-pad left / right | Start spot. Telemetry shows the pose and warns if the spot breaks G304. |
@@ -13,6 +17,40 @@ rotated for blue.
 | D-pad up / down | Start delay, in 0.5 s steps |
 
 Load **4 POLLEN**. Place the robot's center on the spot shown.
+
+### Partner page: keep out of our partner's way
+
+Before each match, ask your partner where their Auto drives and mark
+those tiles. The grid is drawn **as your drive team sees the field from
+its own wall**: your nearest column at the bottom, your left on the left.
+
+```
+far wall <--          --> audience
+C  .  .  .  .  .  .
+B  .  .  #  #  .  .
+A  . [.] .  1  1  .
+      (our wall / drive team)
+```
+
+| Button | Does |
+|---|---|
+| D-pad | Move the cursor |
+| A | Cycle the tile: `.` free → `#` whole Auto → `1` 0–10 s → `2` 10–20 s → `3` 20–30 s |
+| B | Clear all |
+
+**While a tile is marked, Auto won't:**
+- chase a ball in it
+- chase a ball whose straight path crosses it
+- pick a shot spot in it, or drive through it to one
+- run the garden, if the garden is in a marked tile
+
+A robot-sized margin is kept around marked tiles
+(`PartnerPlan.MARGIN_IN`). Starting inside one is fine: the robot is
+allowed to drive out.
+
+The plan **stays set until you change it**. The setup page shows how
+many tiles are marked, so check it every match: partners change. It's
+the same plan for red or blue, drawn from your own side.
 
 Start spots are placeholders until the team picks real ones. They're in
 `auto/StartSpot.java`, and a unit test checks every spot against G304:
@@ -70,8 +108,8 @@ If the team adds a sensor later, the count is the one thing to change.
 
 ## Not yet handled
 
-- **An early tip by our partner.** If the partner tips our HIVE before we
-  expect it, the tags only catch it at our next tip check.
+- **An early tip by our partner** is caught only when the camera is on the
+  tags, which is while lining up and shooting.
 - **Pickups that miss** are counted anyway.
-- **Driving around robots:** routes avoid the HIVE frame only, not other
-  robots.
+- **Driving around robots:** routes avoid the HIVE frame and the partner
+  plan's tiles. They don't see robots.
