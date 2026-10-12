@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.shooting;
 
+import org.firstinspires.ftc.teamcode.field.Blocker;
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.field.FieldPoint;
 import org.firstinspires.ftc.teamcode.field.FieldRect;
@@ -40,6 +41,12 @@ public final class ShotSpots {
      * the ring. Ring radius is to the robot CENTER.
      */
     public static FieldPoint nearest(double robotX, double robotY, FieldPoint target, double radiusIn) {
+        return nearest(robotX, robotY, target, radiusIn, Blocker.NONE);
+    }
+
+    /** Same, but the spot and the straight drive to it must also be clear of blocked areas. */
+    public static FieldPoint nearest(double robotX, double robotY, FieldPoint target, double radiusIn,
+                                     Blocker blocker) {
         double start = Math.atan2(robotY - target.y, robotX - target.x);
         // Walk outward from the robot's own bearing, alternating sides, 2 deg steps.
         for (int k = 0; k <= 90; k++) {
@@ -48,7 +55,8 @@ public final class ShotSpots {
                 double a = start + side * Math.toRadians(2.0 * k);
                 double x = target.x + radiusIn * Math.cos(a);
                 double y = target.y + radiusIn * Math.sin(a);
-                if (allowed(x, y)) return new FieldPoint(x, y);
+                if (allowed(x, y) && !blocker.pointBlocked(x, y)
+                        && !blocker.segmentBlocked(robotX, robotY, x, y)) return new FieldPoint(x, y);
             }
         }
         return null;

@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.teamcode.auto.AutoBrain;
 import org.firstinspires.ftc.teamcode.auto.CellLedger;
+import org.firstinspires.ftc.teamcode.auto.PartnerPlan;
 import org.firstinspires.ftc.teamcode.auto.Routes;
 import org.firstinspires.ftc.teamcode.auto.StartSpot;
 import org.firstinspires.ftc.teamcode.field.Alliance;
@@ -25,6 +26,8 @@ import org.firstinspires.ftc.teamcode.subsystems.Flywheels;
 import org.firstinspires.ftc.teamcode.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.RobotHardware;
 import org.firstinspires.ftc.teamcode.subsystems.Vision;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.tuning.AimTuning;
 import org.firstinspires.ftc.teamcode.tuning.AutoTuning;
 import org.firstinspires.ftc.teamcode.tuning.MechanismTuning;
 import org.firstinspires.ftc.teamcode.tuning.ShotTables;
@@ -38,8 +41,13 @@ import java.util.List;
  * The match Auto. RedAuto / BlueAuto pick the alliance; everything is
  * written for RED and rotated for BLUE.
  *
- * INIT (gamepad 1):  d-pad left/right = start spot,  Y = garden on/off,
- *                    d-pad up/down = start delay (0.5 s steps).
+ * INIT (gamepad 1), two pages, BACK switches:
+ *   SETUP:   d-pad left/right = start spot,  Y = garden on/off,
+ *            d-pad up/down = start delay (0.5 s steps).
+ *   PARTNER: mark the tiles our partner's Auto uses. D-pad moves the
+ *            cursor, A cycles the tile: . free, # whole Auto, 1 / 2 / 3 =
+ *            0-10 / 10-20 / 20-30 s. B clears all. Auto stays out of
+ *            marked tiles (balls, shot spots, routes, the garden).
  *
  * Flow (AutoBrain decides each next job):
  *   shoot the 4 preloads (3 tip the starting CELL; confirm with the tags,
@@ -63,7 +71,10 @@ public abstract class CompetitionAuto extends OpMode {
     private StartSpot startSpot = StartSpot.AUDIENCE_WALL;
     private boolean useGarden = true;
     private double delayS = 0;
-    private final boolean[] last = new boolean[6];
+    private final boolean[] last = new boolean[12];
+    private boolean partnerPage = false;
+    private int cursorCol = 0, cursorRow = 0;
+    private final PartnerPlan plan = MatchState.partnerPlan;
 
     private Follower follower;
     private RobotHardware hw;
@@ -114,6 +125,12 @@ public abstract class CompetitionAuto extends OpMode {
 
     @Override
     public void init_loop() {
+        telemetry.setDisplayFormat(Telemetry.DisplayFormat.MONOSPACE);
+        if (pressed(5, gamepad1.back)) partnerPage = !partnerPage;
+        if (partnerPage) {
+            partnerInit();
+            return;
+        }
         StartSpot[] spots = StartSpot.values();
         if (pressed(0, gamepad1.dpad_right)) startSpot = spots[(startSpot.ordinal() + 1) % spots.length];
         if (pressed(1, gamepad1.dpad_left)) startSpot = spots[(startSpot.ordinal() + spots.length - 1) % spots.length];
@@ -129,8 +146,30 @@ public abstract class CompetitionAuto extends OpMode {
         if (illegal != null) telemetry.addData("!! START SPOT PROBLEM", illegal);
         telemetry.addData("Garden (Y)", useGarden ? "ON" : "OFF (partner takes it)");
         telemetry.addData("Delay (d-pad up/down)", "%.1f s", delayS);
+        telemetry.addData("Partner plan (BACK to edit)", plan.blockedCount() == 0 ? "none"
+                : plan.blockedCount() + " tile(s) marked: CHECK it is this match's partner");
         telemetry.addLine("Load 4 POLLEN.");
         if (!hw.missing.isEmpty()) telemetry.addData("Not in config", hw.missing);
+        telemetry.update();
+    }
+
+    private void partnerInit() {
+        // On screen: nearest column at the bottom, the drive team's left on the left.
+        if (pressed(6, gamepad1.dpad_up)) cursorCol = Math.min(PartnerPlan.COLS - 1, cursorCol + 1);
+        if (pressed(7, gamepad1.dpad_down)) cursorCol = Math.max(0, cursorCol - 1);
+        if (pressed(8, gamepad1.dpad_left)) cursorRow = Math.min(PartnerPlan.ROWS - 1, cursorRow + 1);
+        if (pressed(9, gamepad1.dpad_right)) cursorRow = Math.max(0, cursorRow - 1);
+        if (pressed(10, gamepad1.a)) plan.cycle(cursorCol, cursorRow);
+        if (pressed(11, gamepad1.b)) plan.clear();
+
+        telemetry.addLine("PARTNER PLAN (" + alliance + ")   BACK = setup page");
+        for (String line : plan.render(cursorCol, cursorRow, alliance)) telemetry.addLine(line);
+        telemetry.addLine("");
+        telemetry.addLine("Tile " + PartnerPlan.tileName(cursorCol, cursorRow, alliance) + ": "
+                + plan.get(cursorCol, cursorRow));
+        telemetry.addLine("A: cycle  . free  # whole Auto");
+        telemetry.addLine("          1 = 0-10s  2 = 10-20s  3 = 20-30s");
+        telemetry.addLine("B: clear all");
         telemetry.update();
     }
 
@@ -262,7 +301,9 @@ public abstract class CompetitionAuto extends OpMode {
                 double pan = AutoTuning.SCAN_PAN_DEG * Math.sin(2 * Math.PI * inStep / AutoTuning.SCAN_S);
                 vision.lookForBalls(pan);
                 List<BallSighting> balls = vision.balls(pose.getX(), pose.getY(), pose.getHeading());
-                BallSighting pick = BallPicker.pick(balls, alliance, true, pose.getX(), pose.getY(), pose.getHeading());
+                double tNow = getRuntime();
+                BallSighting pick = BallPicker.pick(balls, alliance, true, pose.getX(), pose.getY(), pose.getHeading(),
+                        plan.between(alliance, tNow, tNow + AutoTuning.PICKUP_TIMEOUT_S));
                 if (pick != null) {
                     double dir = Math.atan2(pick.y - pose.getY(), pick.x - pose.getX());
                     Pose grab = new Pose(pick.x - AutoTuning.PICKUP_STANDOFF_IN * Math.cos(dir),
@@ -314,12 +355,18 @@ public abstract class CompetitionAuto extends OpMode {
     // =============================================================== jobs
 
     private void plan(Pose pose, FieldPoint target, double left) {
-        job = AutoBrain.next(held, left, useGarden, gardenDone, ledger.pollenToTip());
+        double t = getRuntime();
+        boolean gardenClear = !plan.blockedDuring(alliance, alliance.xFromRed(AutoTuning.GARDEN_X),
+                alliance.yFromRed(AutoTuning.GARDEN_PUSH_Y), t, t + 6)
+                && !plan.blockedDuring(alliance, alliance.xFromRed(AutoTuning.GARDEN_X),
+                alliance.yFromRed(AutoTuning.GARDEN_APPROACH_Y), t, t + 6);
+        job = AutoBrain.next(held, left, useGarden && gardenClear, gardenDone, ledger.pollenToTip());
         if (job == AutoBrain.Job.COLLECT && collectGaveUp) job = held > 0 ? AutoBrain.Job.SHOOT : AutoBrain.Job.PARK;
         intake.stop();
         switch (job) {
             case SHOOT: {
-                FieldPoint spot = ShotSpots.nearest(pose.getX(), pose.getY(), target);
+                FieldPoint spot = ShotSpots.nearest(pose.getX(), pose.getY(), target,
+                        AimTuning.PREALIGN_DISTANCE_IN, plan.between(alliance, t, t + AutoTuning.SHOOT_RESERVE_S));
                 if (spot == null) { job = AutoBrain.Job.PARK; enter(Step.DONE); return; }
                 moveTo(new Pose(spot.x, spot.y, ShotSpots.aimHeading(spot.x, spot.y, target)), Step.AIM);
                 break;
