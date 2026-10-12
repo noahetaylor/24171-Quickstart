@@ -4,6 +4,7 @@ import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.field.FieldPoint;
 import org.firstinspires.ftc.teamcode.field.FieldRect;
 import org.firstinspires.ftc.teamcode.tuning.AimTuning;
+import org.firstinspires.ftc.teamcode.tuning.ShotTables;
 
 /**
  * Pre-align: where the robot should drive to take a shot. The nearest point
@@ -56,5 +57,13 @@ public final class ShotSpots {
     /** nearest() at the tuned pre-align distance. */
     public static FieldPoint nearest(double robotX, double robotY, FieldPoint target) {
         return nearest(robotX, robotY, target, AimTuning.PREALIGN_DISTANCE_IN);
+    }
+
+    /** Robot heading that aims both shooters at the target from (x, y): the mean of their aims. */
+    public static double aimHeading(double x, double y, FieldPoint target) {
+        ShotSolution p = ShotPlanner.plan(x, y, 0, target, Shooter.POLLEN, ShotTables.POLLEN);
+        ShotSolution n = ShotPlanner.plan(x, y, 0, target, Shooter.NECTAR, ShotTables.NECTAR);
+        return Math.atan2(Math.sin(p.aimHeadingRad) + Math.sin(n.aimHeadingRad),
+                Math.cos(p.aimHeadingRad) + Math.cos(n.aimHeadingRad));
     }
 }

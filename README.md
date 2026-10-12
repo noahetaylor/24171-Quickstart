@@ -16,7 +16,7 @@ All code is under `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/`.
 
 | I want to… | Go to |
 |---|---|
-| Run a match | Driver Hub group **Competition**: Red/Blue Auto, Red/Blue TeleOp (`opmodes/competition/`). Controls: [docs/driver-controls.md](docs/driver-controls.md) |
+| Run a match | Driver Hub group **Competition**: Red/Blue Auto, Red/Blue TeleOp (`opmodes/competition/`). Controls: [docs/driver-controls.md](docs/driver-controls.md). Auto: [docs/auto.md](docs/auto.md) |
 | Test something or gather data | Driver Hub group **Testing** (`opmodes/testing/`) |
 | Change a number we tuned from testing (shot table, rpm, aim) | `tuning/` (also editable live from Panels in the pit) |
 | Tune the shot tables from real shots | Robot: **Shot Tuner** (Testing). Laptop: `tools/shot-table-editor/Shot Table Editor.bat`. Steps: [docs/shot-model.md](docs/shot-model.md) |

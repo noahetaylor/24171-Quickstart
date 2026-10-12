@@ -11,8 +11,6 @@ import org.firstinspires.ftc.teamcode.field.FieldPoint;
 import org.firstinspires.ftc.teamcode.field.HiveState;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.shooting.AutoAim;
-import org.firstinspires.ftc.teamcode.shooting.ShotPlanner;
-import org.firstinspires.ftc.teamcode.shooting.ShotSolution;
 import org.firstinspires.ftc.teamcode.shooting.ShotSpots;
 import org.firstinspires.ftc.teamcode.shooting.Shooter;
 import org.firstinspires.ftc.teamcode.subsystems.Feeder;
@@ -184,11 +182,7 @@ public abstract class CompetitionTeleOp extends OpMode {
             follower.setTeleOpDrive(0, 0, 0, true);
             return "PRE-ALIGN: no spot";
         }
-        // Heading that aims both shooters from the spot (mean of the two).
-        ShotSolution p = ShotPlanner.plan(spot.x, spot.y, pose.getHeading(), target, Shooter.POLLEN, ShotTables.POLLEN);
-        ShotSolution n = ShotPlanner.plan(spot.x, spot.y, pose.getHeading(), target, Shooter.NECTAR, ShotTables.NECTAR);
-        double heading = Math.atan2(Math.sin(p.aimHeadingRad) + Math.sin(n.aimHeadingRad),
-                Math.cos(p.aimHeadingRad) + Math.cos(n.aimHeadingRad));
+        double heading = ShotSpots.aimHeading(spot.x, spot.y, target);
 
         Pose want = new Pose(spot.x, spot.y, heading);
         if (holdTarget == null || moved(holdTarget, want)) {
