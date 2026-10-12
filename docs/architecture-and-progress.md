@@ -1,4 +1,4 @@
-# Architecture & Progress Notes (Summer 2026)
+# Architecture & Progress Notes
 
 Living reference for how the code is organized and why, plus known gaps to
 close once the season/robot are real. Update this as things change — treat
@@ -79,29 +79,49 @@ The README's "Where things are" section has the short version.
   works as intended — only `RobotHardware`'s device names needed changing
   between real-robot and sim versions.
 
-## Open questions for build team / fall
+## Open questions for the build team
 
-- ~~Odometry approach not finalized~~ — decided: two goBILDA 4-Bar pods
-  + IMU (two-wheel localizer). The sim's StpBot still models 3-pod
-  odometry and its example config a Pinpoint; neither matches the robot.
+- **Wiring:** the Expansion Hub port map in [port-map.md](port-map.md) is
+  a proposal. Wire to it, or change it and `config/HardwareConfig`
+  together.
 - **Shared Control Hub:** inventory shows only 1 Control Hub across both
-  teams in the club — a scheduling/ordering conversation, not a code
-  problem, but worth raising early.
-- Real drivetrain motor names/directions (currently placeholders in
-  `RobotHardware.java`) need to match whatever the Driver Station config
-  ends up using once a Control Hub exists.
+  teams in the club. That's a scheduling/ordering conversation, not a
+  code problem.
+- **Turret + adjustable hood (target Nov 7):** the shot model already
+  supports a hood range (`tuning/ShooterTuning` `HOOD_MIN/MAX_DEG`). Turret
+  yaw is not modeled yet.
+- **Ball sensor:** none planned, so Auto counts balls (see
+  [auto.md](auto.md)). A trough sensor would make Auto much more reliable.
+
+## Where things stand (Oct 2026)
+
+All the code below was written without robot access. **Nothing has run on
+hardware yet.** Bring-up order and every value still to measure:
+[robot-checklist.md](robot-checklist.md).
+
+| Area | Code | Doc |
+|---|---|---|
+| SDK 12.0, Gradle 9.1 | build files | README |
+| Odometry (2 pods + IMU), Pod Placer | `config/`, `tools/pod-placer` | [odometry-setup.md](odometry-setup.md) |
+| Field model, red/blue rotation, HIVE state | `field/` | [field-model.md](field-model.md) |
+| Shot model, two-shooter auto-aim, pre-align | `shooting/`, `tuning/` | [shot-model.md](shot-model.md) |
+| Shot data → tables | Shot Tuner OpMode, `tools/shot-table-editor` | [shot-model.md](shot-model.md) |
+| Mechanisms | `subsystems/` | [port-map.md](port-map.md) |
+| Limelight: ball pipeline, tag position fixes | `vision/`, `subsystems/Vision`, `assets/limelight/` | [vision.md](vision.md) |
+| Red/Blue TeleOp | `opmodes/competition/` | [driver-controls.md](driver-controls.md) |
+| Red/Blue Auto, partner plans | `auto/`, `opmodes/competition/`, `tools/partner-planner` | [auto.md](auto.md) |
 
 ## Roadmap
 
 1. ✅ Pedro Visualizer basics + `AutoTemplate`
 2. ✅ Subsystem structure (`RobotHardware` + `Drivetrain`, validated in sim)
-3. ⏳ Record & replay autonomous framework — record robot pose (not raw
-   inputs) over time, reconstruct as a Pedro path, follow closed-loop.
-   Discrete actions tagged to position/time as events. Building the
-   framework (data format, event system, path reconstruction) robot-free
-   this summer; wiring to real odometry recording is a fall task.
-4. ✅ SDK 12.0, odometry config (unverified on robot), field model, shot
-   model, auto-aim (Oct 2026)
-5. ⏳ Mechanism subsystems (intake, transfer, shooters), Red/Blue
-   competition OpModes, shot data logging + table editor
-6. Auto routines, ball vision, partner planner
+3. ⏸ Record & replay framework (`replay/`): data format, events, path
+   reconstruction. Built robot-free; not wired to the robot yet.
+4. ✅ SDK 12.0, odometry config, field model, shot model, auto-aim
+5. ✅ Mechanisms, Red/Blue TeleOp with pre-align, shot logging + table
+   editor
+6. ✅ Ball vision, AprilTag position correction, Red/Blue Auto, partner
+   planner
+7. ⏳ **Robot bring-up and tuning:** work through
+   [robot-checklist.md](robot-checklist.md) top to bottom
+8. Later: turret + adjustable hood, a ball sensor if one is added
