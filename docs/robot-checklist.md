@@ -60,6 +60,15 @@ a PR as they're done.
 - [ ] Practice start spot (`MatchState`, no Auto) matches where the robot
       is placed
 
+## 7. Autonomous ([auto.md](auto.md))
+- [ ] Pick real start spots (`auto/StartSpot`); keep the G304 test passing
+- [ ] `FEED_PER_BALL_S`: time for one ball to go up
+- [ ] Garden line-up and push collect the garden POLLEN (`AutoTuning.GARDEN_*`)
+- [ ] Pickups: robot drives its intake over a seen ball (`PICKUP_STANDOFF_IN`)
+- [ ] Tip confirmation sees the tags from the shot spot
+- [ ] Full run, red and blue: tip 1 reliably; count how many balls tip 2 gets
+- [ ] TeleOp after Auto continues from Auto's pose and HIVE state
+
 ## Done
 - [x] Balls leave out the front (`LAUNCH_YAW_DEG = 0`), team, 2026-10-12
 - [x] Field CAD: HIVE ±12 in from center, up-CELL opening ~53.5 in high,
