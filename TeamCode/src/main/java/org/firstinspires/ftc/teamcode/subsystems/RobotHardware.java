@@ -1,24 +1,40 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.config.HardwareConfig;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Shared hardware class. Owns references to physical devices and does the
- * one-time hardwareMap lookups. Subsystems (like Drivetrain) take this in
- * their constructor instead of touching hardwareMap directly.
+ * one-time hardwareMap lookups. Subsystems take this in their constructor
+ * instead of touching hardwareMap directly.
  *
  * Device names and directions come from HardwareConfig, which Pedro's
- * Constants also reads — so TeleOp and autonomous always agree.
+ * Constants also reads, so TeleOp and autonomous always agree.
  *
- * As mechanisms get added this fall, their motors/servos get declared and
- * initialized here too, following the same pattern as the drive motors below.
+ * Drive motors are required. Mechanisms are OPTIONAL: if one isn't in the
+ * Driver Hub configuration it stays null, its subsystem does nothing, and
+ * its name is listed in {@link #missing} for telemetry. That lets a
+ * half-built robot run.
  */
 public class RobotHardware {
 
     public DcMotor frontLeft, frontRight, backLeft, backRight;
+
+    public DcMotorEx pollenFlywheel, nectarFlywheel, intake, transfer;
+    public CRServo crossWheels;
+    public Servo rampBar;
+
+    /** Mechanism names not found in the robot configuration. */
+    public final List<String> missing = new ArrayList<>();
 
     public void init(HardwareMap hardwareMap) {
         frontLeft = hardwareMap.get(DcMotor.class, HardwareConfig.LEFT_FRONT);
@@ -41,5 +57,54 @@ public class RobotHardware {
             // coast/drift after releasing the sticks.
             motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         }
+
+        initMechanisms(hardwareMap);
+    }
+
+    /**
+     * Mechanisms only, for code that leaves the drive motors to Pedro's
+     * Follower (competition OpModes).
+     */
+    public void initMechanisms(HardwareMap hardwareMap) {
+        missing.clear();
+
+        pollenFlywheel = motor(hardwareMap, HardwareConfig.POLLEN_FLYWHEEL);
+        nectarFlywheel = motor(hardwareMap, HardwareConfig.NECTAR_FLYWHEEL);
+        intake = motor(hardwareMap, HardwareConfig.INTAKE);
+        transfer = motor(hardwareMap, HardwareConfig.TRANSFER);
+
+        if (pollenFlywheel != null) setUpFlywheel(pollenFlywheel, HardwareConfig.POLLEN_FLYWHEEL_DIR);
+        if (nectarFlywheel != null) setUpFlywheel(nectarFlywheel, HardwareConfig.NECTAR_FLYWHEEL_DIR);
+        if (intake != null) {
+            intake.setDirection(HardwareConfig.INTAKE_DIR);
+            intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            intake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        }
+        if (transfer != null) {
+            transfer.setDirection(HardwareConfig.TRANSFER_DIR);
+            transfer.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            // BRAKE: a stopped transfer is what holds the balls in the trough.
+            transfer.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        }
+
+        crossWheels = hardwareMap.tryGet(CRServo.class, HardwareConfig.CROSS_WHEELS);
+        if (crossWheels == null) missing.add(HardwareConfig.CROSS_WHEELS);
+        else crossWheels.setDirection(HardwareConfig.CROSS_WHEELS_DIR);
+
+        rampBar = hardwareMap.tryGet(Servo.class, HardwareConfig.RAMP_BAR);
+        if (rampBar == null) missing.add(HardwareConfig.RAMP_BAR);
+    }
+
+    private DcMotorEx motor(HardwareMap hardwareMap, String name) {
+        DcMotorEx m = hardwareMap.tryGet(DcMotorEx.class, name);
+        if (m == null) missing.add(name);
+        return m;
+    }
+
+    private static void setUpFlywheel(DcMotorEx m, DcMotorSimple.Direction dir) {
+        m.setDirection(dir);
+        m.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        // FLOAT: let a spinning flywheel coast down instead of braking hard.
+        m.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
     }
 }
