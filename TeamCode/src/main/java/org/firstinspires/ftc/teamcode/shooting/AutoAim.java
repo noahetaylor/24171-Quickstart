@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode.shooting;
 
 import org.firstinspires.ftc.teamcode.field.Field;
 import org.firstinspires.ftc.teamcode.field.FieldPoint;
+import org.firstinspires.ftc.teamcode.tuning.AimTuning;
+import org.firstinspires.ftc.teamcode.tuning.ShooterTuning;
 
 /**
  * Auto-aim: each loop, turns the robot toward the shot, sets the flywheel
@@ -17,21 +19,11 @@ import org.firstinspires.ftc.teamcode.field.FieldPoint;
  * frame), turn rate (rad/s, CCW positive). turnPower is for Pedro's
  * setTeleOpDrive rotation input: positive turns CCW.
  *
- * Pure logic, no hardware: unit-tested in AutoAimTest.
+ * Gains and limits: tuning/AimTuning. Pure logic, no hardware:
+ * unit-tested in AutoAimTest.
  */
 public final class AutoAim {
     private AutoAim() {}
-
-    // --------------------------------------------------------- tunables
-    public static double TURN_KP = 1.2;               // turn power per radian of error
-    public static double TURN_KD = 0.08;              // turn power per rad/s (damping)
-    public static double TURN_MAX = 0.8;
-    public static double TURN_MIN = 0.06;             // enough to actually move the robot
-    public static double HEADING_TOL_DEG = 2.0;       // allowed aim error at release
-    public static double MAX_TURN_RATE_DEG_S = 30.0;  // must be nearly settled
-    public static double RPM_TOL = 0.03;              // fraction of target rpm
-    public static double MAX_DRIVE_SPEED_IN_S = 40.0; // faster than this: don't fire
-    public static boolean LEAD_MOVING_SHOTS = true;
 
     public enum Status {
         /** No shot from here (too close / needs too much rpm). */
@@ -70,14 +62,14 @@ public final class AutoAim {
                                  double flywheelRpm,
                                  FieldPoint target, Shooter shooter, ShotTable table) {
         // Where the robot will be when the ball actually leaves.
-        double lat = Shooter.FIRE_LATENCY_S;
+        double lat = ShooterTuning.FIRE_LATENCY_S;
         double px = x + vx * lat;
         double py = y + vy * lat;
         double ph = heading + omega * lat;
 
         FieldPoint aimAt = target;
         ShotSolution shot = ShotPlanner.plan(px, py, ph, aimAt, shooter, table);
-        if (LEAD_MOVING_SHOTS && shot.feasible) {
+        if (AimTuning.LEAD_MOVING_SHOTS && shot.feasible) {
             for (int i = 0; i < 3; i++) {
                 double t = shot.flightTimeS;
                 aimAt = new FieldPoint(target.x - vx * t, target.y - vy * t, target.z);
@@ -87,22 +79,22 @@ public final class AutoAim {
         }
 
         double errNow = Field.normalizeRadians(shot.aimHeadingRad - heading);
-        double turn = TURN_KP * errNow - TURN_KD * omega;
-        if (Math.abs(errNow) > Math.toRadians(HEADING_TOL_DEG) / 2 && Math.abs(turn) < TURN_MIN) {
-            turn = Math.copySign(TURN_MIN, errNow);
+        double turn = AimTuning.TURN_KP * errNow - AimTuning.TURN_KD * omega;
+        if (Math.abs(errNow) > Math.toRadians(AimTuning.HEADING_TOL_DEG) / 2 && Math.abs(turn) < AimTuning.TURN_MIN) {
+            turn = Math.copySign(AimTuning.TURN_MIN, errNow);
         }
-        turn = Math.max(-TURN_MAX, Math.min(TURN_MAX, turn));
+        turn = Math.max(-AimTuning.TURN_MAX, Math.min(AimTuning.TURN_MAX, turn));
 
         Status status;
         if (!shot.feasible) {
             status = Status.NO_SHOT;
             turn = 0;
-        } else if (Math.hypot(vx, vy) > MAX_DRIVE_SPEED_IN_S) {
+        } else if (Math.hypot(vx, vy) > AimTuning.MAX_DRIVE_SPEED_IN_S) {
             status = Status.MOVING_TOO_FAST;
-        } else if (Math.abs(shot.turnRad) > Math.toRadians(HEADING_TOL_DEG)
-                || Math.abs(omega) > Math.toRadians(MAX_TURN_RATE_DEG_S)) {
+        } else if (Math.abs(shot.turnRad) > Math.toRadians(AimTuning.HEADING_TOL_DEG)
+                || Math.abs(omega) > Math.toRadians(AimTuning.MAX_TURN_RATE_DEG_S)) {
             status = Status.TURNING;
-        } else if (Math.abs(flywheelRpm - shot.rpm) > RPM_TOL * shot.rpm) {
+        } else if (Math.abs(flywheelRpm - shot.rpm) > AimTuning.RPM_TOL * shot.rpm) {
             status = Status.SPINNING_UP;
         } else {
             status = Status.READY;

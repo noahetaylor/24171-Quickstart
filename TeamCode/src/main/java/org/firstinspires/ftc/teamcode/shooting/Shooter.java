@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.shooting;
 
+import org.firstinspires.ftc.teamcode.tuning.ShooterTuning;
+
 /**
  * The robot's two shooters and their fixed geometry.
  *
@@ -10,7 +12,7 @@ package org.firstinspires.ftc.teamcode.shooting;
  * release point = hood end about the flywheel axis.
  *
  * Re-check these when the shooter hardware changes (turret, adjustable
- * hood, different flywheel).
+ * hood, different flywheel). Tuned numbers live in tuning/ShooterTuning.
  */
 public enum Shooter {
     // forward, left, height, wheel diameter
@@ -32,48 +34,18 @@ public enum Shooter {
         this.wheelDiameterIn = wheelDiameterIn;
     }
 
-    // ------------------------------------------------- tunables (both heads)
-
-    /**
-     * Direction the ball flies, relative to the robot's heading, degrees CCW.
-     * 0 = out the front. From the CAD's hood geometry (release at the hood's
-     * rear end, tangent forward-up). CONFIRM ON THE ROBOT: if balls fly out
-     * the back, set 180.
-     */
-    public static double LAUNCH_YAW_DEG = 0.0;
-
-    /**
-     * Hood range in degrees of launch elevation. Equal = fixed hood (the
-     * SIMPLE heads: whichever print is fitted, 50..70 in steps of 5).
-     */
-    public static double HOOD_MIN_DEG = 60.0;
-    public static double HOOD_MAX_DEG = 60.0;
-
-    /**
-     * Ball speed / flywheel surface speed. A ball squeezed between a spinning
-     * wheel and a fixed hood rolls, so its center moves at about half the
-     * surface speed; slip lowers it. Tune from measured shots.
-     */
-    public static double EXIT_EFFICIENCY = 0.5;
-
-    /** Flywheel rpm we will ask for. 5203 1:1 is ~6000 free; leave headroom for load. */
-    public static double MAX_RPM = 5100.0;
-
-    /** Trigger to ball leaving the hood, seconds. Auto-aim fires this much early. MEASURE. */
-    public static double FIRE_LATENCY_S = 0.15;
-
     public static boolean hoodIsFixed() {
-        return HOOD_MAX_DEG - HOOD_MIN_DEG < 1e-9;
+        return ShooterTuning.HOOD_MAX_DEG - ShooterTuning.HOOD_MIN_DEG < 1e-9;
     }
 
     /** Flywheel rpm that gives this ball exit speed (in/s). */
     public double rpmForSpeed(double ballSpeedInPerS) {
-        double surface = ballSpeedInPerS / EXIT_EFFICIENCY;
+        double surface = ballSpeedInPerS / ShooterTuning.EXIT_EFFICIENCY;
         return surface / (Math.PI * wheelDiameterIn) * 60.0;
     }
 
     /** Ball exit speed (in/s) at this flywheel rpm. */
     public double speedForRpm(double rpm) {
-        return rpm / 60.0 * Math.PI * wheelDiameterIn * EXIT_EFFICIENCY;
+        return rpm / 60.0 * Math.PI * wheelDiameterIn * ShooterTuning.EXIT_EFFICIENCY;
     }
 }

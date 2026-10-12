@@ -1,0 +1,37 @@
+# Robot Checklist
+
+Everything written without the robot that still needs checking on it.
+Work top to bottom: later items trust the ones above. Tick items off in
+a PR as they're done.
+
+## 1. SDK 12.0
+- [ ] REV Hardware Client: update the Driver Hub app and Control Hub
+      firmware to 12.0, then deploy from Android Studio
+- [ ] Robot connects; an existing OpMode runs
+
+## 2. Odometry ([odometry-setup.md](odometry-setup.md))
+- [ ] Driver Hub robot configuration matches [port-map.md](port-map.md)
+- [ ] Hub mounting: set `config/HardwareConfig` `HUB_LOGO` / `HUB_USB`.
+      In **Odometry Check**, the heading rises when the robot turns
+      counter-clockwise
+- [ ] Pod arrows: set in the Pod Placer from Odometry Check's raw counts
+- [ ] Offsets Tuner: `forwardY ≈ +4.25`, `strafeX ≈ −7.5`. If `forwardY`'s
+      sign is opposite, flip the rule in `config/OdometryPods` (and its test)
+- [ ] Forward / Lateral Tuners → `POD_INCHES_PER_TICK`
+- [ ] Localization Test: a lap returns within ~1 in; spinning in place
+      barely moves x/y
+- [ ] Pod Placer: dragging, rotating and saving tried in a browser
+- [ ] Rest of Pedro tuning (velocities, zero-power acceleration, PIDF)
+
+## 3. Shooting ([shot-model.md](shot-model.md))
+- [ ] `tuning/ShooterTuning` `FIRE_LATENCY_S`: trigger to ball leaving
+- [ ] `EXIT_EFFICIENCY`: the measured ball speed fits the physics rpm
+- [ ] **Shot Planner Check**: distance readout matches a tape measure
+- [ ] Fill `tuning/ShotTables` for both shooters across the distances
+      we shoot from
+- [ ] `tuning/AimTuning`: turns crisply onto target without overshoot
+
+## Done
+- [x] Balls leave out the front (`LAUNCH_YAW_DEG = 0`), team, 2026-10-12
+- [x] Field CAD: HIVE ±12 in from center, up-CELL opening ~53.5 in high,
+      FLOWER 3 in from the wall, team, 2026-10-12

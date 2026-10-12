@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.opmodes.examples;
 
 // ── If any of these show red in Android Studio, retype the class name
 //    (e.g. "Pose") and use autocomplete (Alt+Enter) to pick the real
@@ -26,7 +26,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
  * (paste in whatever the Pedro Visualizer exports for that specific run).
  * Everything else (Follower setup, the update loop, telemetry) stays the same.
  */
-@Autonomous(name = "Auto Template")
+@Autonomous(name = "Auto Template", group = "Examples")
 public class AutoTemplate extends OpMode {
 
     private Follower follower;

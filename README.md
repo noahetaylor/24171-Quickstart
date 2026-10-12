@@ -10,6 +10,26 @@ This is the real FTC SDK + Pedro Pathing project that gets deployed to the Contr
 
 ---
 
+## Where things are
+
+All code is under `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/`.
+
+| I want to… | Go to |
+|---|---|
+| Run a match | Driver Hub group **Competition**: Red/Blue Auto, Red/Blue TeleOp (`opmodes/competition/`) |
+| Test something or gather data | Driver Hub group **Testing** (`opmodes/testing/`) |
+| Change a number we tuned from testing (shot table, rpm, aim) | `tuning/` (also editable live from Panels in the pit) |
+| Change a hardware name or the odometry pod layout | `config/` (pods: the Pod Placer tool, `tools/pod-placer/`) |
+| See what still needs checking on the robot | [docs/robot-checklist.md](docs/robot-checklist.md) |
+| Understand the field coordinates / red vs blue | [docs/field-model.md](docs/field-model.md) |
+| Understand shooting + auto-aim | [docs/shot-model.md](docs/shot-model.md) |
+| Wire the robot | [docs/port-map.md](docs/port-map.md) |
+
+Logic lives in `field/`, `shooting/`, `subsystems/`, `replay/` and
+`pedroPathing/`. You shouldn't need to touch these at practice.
+
+---
+
 ## What you need (one-time, per machine)
 
 Any laptop that will build or deploy code needs this set up **once**:
@@ -88,11 +108,3 @@ APKs land in `TeamCode/build/outputs/apk/`.
 - **Don't commit straight to `master`.** Use a feature branch, then merge via PR.
 - Keep OpModes and subsystems organized under `TeamCode/`.
 - After pulling upstream Pedro updates, re-sync Gradle and re-run a build before trusting anything.
-
----
-
-## Heads-up for the fall
-
-The FTC SDK version pinned here may need bumping once the official 2026–2027
-season SDK is released (FIRST usually publishes it in September). When that lands,
-update the FTC SDK dependency, re-sync, and re-build before deploying.
