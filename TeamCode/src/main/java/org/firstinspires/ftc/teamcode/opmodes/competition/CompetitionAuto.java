@@ -53,8 +53,12 @@ import java.util.List;
  *   shoot the 4 preloads (3 tip the starting CELL; confirm with the tags,
  *   then the 4th goes into the new up CELL) -> GARDEN (optional) -> shoot
  *   -> Limelight pickups on our half -> shoot ... until time runs out.
- * While lining up and shooting, the Limelight watches the CELL tags: they
- * confirm tips (ours or a partner's) and correct the odometry position.
+ * The Limelight has two jobs and switches between them:
+ *  - TAGS while lining up, shooting, and just before a ball search (LOCK,
+ *    when the last position fix is old): confirms tips (ours or a
+ *    partner's) and corrects the odometry position.
+ *  - BALLS while searching (stepped looks: straight, left, right) and while
+ *    driving to a ball (it re-sights the ball and steers to it).
  * No ball sensor: balls held are counted (pickups assumed to succeed),
  * and feeding runs for FEED_PER_BALL_S per ball. Pose and HIVE state carry
  * into TeleOp through MatchState.
@@ -63,7 +67,7 @@ public abstract class CompetitionAuto extends OpMode {
 
     private static final double AUTO_LENGTH_S = 30;
 
-    private enum Step { DELAY, PLAN, MOVE, AIM, FEED, CONFIRM_TIP, GARDEN_PUSH, GARDEN_BACK, SCAN, PICKUP, DONE }
+    private enum Step { DELAY, PLAN, MOVE, AIM, FEED, CONFIRM_TIP, GARDEN_PUSH, GARDEN_BACK, LOCK, SCAN, PICKUP, DONE }
 
     private final Alliance alliance;
 
@@ -99,6 +103,8 @@ public abstract class CompetitionAuto extends OpMode {
     /** The up CELL the ledger is counting for; when the HIVE state changes, the ledger restarts. */
     private Cell ledgerCell = null;
     private int tagFixes = 0;
+    private double lastFixTime = -100;
+    private BallSighting chasing = null;
     private String note = "";
 
     protected CompetitionAuto(Alliance alliance) {
@@ -211,7 +217,7 @@ public abstract class CompetitionAuto extends OpMode {
         if (left <= 0.2 && step != Step.DONE) enter(Step.DONE);
 
         // Facing the HIVE (lining up, shooting, checking a tip): watch the tags.
-        if (step == Step.AIM || step == Step.FEED || step == Step.CONFIRM_TIP) {
+        if (step == Step.AIM || step == Step.FEED || step == Step.CONFIRM_TIP || step == Step.LOCK) {
             vision.lookAtHive(alliance, pose.getX(), pose.getY(), pose.getHeading());
             vision.observeHive(hive, pose.getHeading());
             double[] c = TagLocalizer.correct(pose.getX(), pose.getY(), vision.lastFix(),
@@ -219,6 +225,7 @@ public abstract class CompetitionAuto extends OpMode {
             if (c != null) {
                 follower.setPose(new Pose(c[0], c[1], pose.getHeading()));
                 tagFixes++;
+                lastFixTime = now;
             }
         }
         // Any change of the up CELL (our tip, a partner's, or assumed) restarts the count.
@@ -297,8 +304,19 @@ public abstract class CompetitionAuto extends OpMode {
                 }
                 break;
 
+            case LOCK:
+                // Tags watched above; done once a fix lands or time is up.
+                if (lastFixTime >= stepStart || inStep > AutoTuning.LOCK_S) {
+                    note = lastFixTime >= stepStart ? "position locked from tags" : "no tag fix, searching anyway";
+                    enter(Step.SCAN);
+                }
+                break;
+
             case SCAN: {
-                double pan = AutoTuning.SCAN_PAN_DEG * Math.sin(2 * Math.PI * inStep / AutoTuning.SCAN_S);
+                // Stepped looks (straight, left, right): the camera holds still for each, so
+                // balls are located with the right angle (a sweep would smear it).
+                double[] looks = {0, AutoTuning.SCAN_PAN_DEG, -AutoTuning.SCAN_PAN_DEG};
+                double pan = looks[Math.min(looks.length - 1, (int) (inStep / AutoTuning.SCAN_DWELL_S))];
                 vision.lookForBalls(pan);
                 List<BallSighting> balls = vision.balls(pose.getX(), pose.getY(), pose.getHeading());
                 double tNow = getRuntime();
@@ -309,10 +327,11 @@ public abstract class CompetitionAuto extends OpMode {
                     Pose grab = new Pose(pick.x - AutoTuning.PICKUP_STANDOFF_IN * Math.cos(dir),
                             pick.y - AutoTuning.PICKUP_STANDOFF_IN * Math.sin(dir), dir);
                     note = "going for " + pick;
+                    chasing = pick;
                     intake.in();
                     moveTo(grab, Step.PLAN);
                     step = Step.PICKUP;
-                } else if (inStep > AutoTuning.SCAN_S) {
+                } else if (inStep > 3 * AutoTuning.SCAN_DWELL_S) {
                     if (++scanTurns >= 3) {
                         collectGaveUp = true;
                         note = "no balls found";
@@ -328,6 +347,7 @@ public abstract class CompetitionAuto extends OpMode {
 
             case PICKUP:
                 intake.in();
+                resight(pose);
                 if (arrived(pose) || inStep > AutoTuning.PICKUP_TIMEOUT_S) {
                     held = Math.min(AutoBrain.CAPACITY, held + 1);
                     scanTurns = 0;
@@ -376,8 +396,14 @@ public abstract class CompetitionAuto extends OpMode {
                 // GARDEN_PUSH then drives in; set its goal when it starts (see enter()).
                 break;
             case COLLECT:
-                vision.lookForBalls(0);
-                enter(Step.SCAN);
+                // Ball positions come from our pose: lock it first if the last fix is old.
+                if (getRuntime() - lastFixTime > AutoTuning.RELOCK_AFTER_S
+                        && Vision.hiveInReach(alliance, pose.getX(), pose.getY(), pose.getHeading())) {
+                    enter(Step.LOCK);
+                } else {
+                    vision.lookForBalls(0);
+                    enter(Step.SCAN);
+                }
                 break;
             default:
                 enter(Step.DONE);
@@ -387,6 +413,38 @@ public abstract class CompetitionAuto extends OpMode {
     private Pose gardenPose(double redY) {
         return new Pose(alliance.xFromRed(AutoTuning.GARDEN_X), alliance.yFromRed(redY),
                 alliance.headingFromRed(Math.toRadians(AutoTuning.GARDEN_HEADING_DEG)));
+    }
+
+    /**
+     * While driving to a ball, keep the camera on it. If it shows up
+     * somewhere else (knocked, or first seen from far away), steer to
+     * where it is now. Stops close in, where it goes under the intake.
+     */
+    private void resight(Pose pose) {
+        if (chasing == null) return;
+        double range = Math.hypot(chasing.x - pose.getX(), chasing.y - pose.getY());
+        if (range < AutoTuning.RESIGHT_MIN_RANGE_IN) return;
+        double pan = Math.toDegrees(Field.normalizeRadians(
+                Math.atan2(chasing.y - pose.getY(), chasing.x - pose.getX()) - pose.getHeading()));
+        vision.lookForBalls(pan);
+        BallSighting best = null;
+        double bestD = AutoTuning.RESIGHT_RADIUS_IN;
+        for (BallSighting b : vision.balls(pose.getX(), pose.getY(), pose.getHeading())) {
+            double d = Math.hypot(b.x - chasing.x, b.y - chasing.y);
+            if (b.kind == chasing.kind && d < bestD) {
+                bestD = d;
+                best = b;
+            }
+        }
+        if (best != null && bestD > AutoTuning.RESIGHT_MOVE_IN) {
+            chasing = best;
+            double dir = Math.atan2(best.y - pose.getY(), best.x - pose.getX());
+            double started = stepStart;
+            moveTo(new Pose(best.x - AutoTuning.PICKUP_STANDOFF_IN * Math.cos(dir),
+                    best.y - AutoTuning.PICKUP_STANDOFF_IN * Math.sin(dir), dir), Step.PLAN);
+            step = Step.PICKUP;
+            stepStart = started;   // keep the original pickup timeout
+        }
     }
 
     // =============================================================== motion
@@ -435,7 +493,8 @@ public abstract class CompetitionAuto extends OpMode {
             follower.holdPoint(gardenPose(AutoTuning.GARDEN_PUSH_Y));
             moveGoal = gardenPose(AutoTuning.GARDEN_PUSH_Y);
         }
-        if (s == Step.SCAN) follower.holdPoint(follower.getPose());
+        if (s == Step.SCAN || s == Step.LOCK) follower.holdPoint(follower.getPose());
+        if (s == Step.PLAN) chasing = null;
     }
 
     private boolean pressed(int i, boolean now) {

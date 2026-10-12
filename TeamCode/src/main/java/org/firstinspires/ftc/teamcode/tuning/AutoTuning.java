@@ -43,9 +43,20 @@ public final class AutoTuning {
     // --------------------------------------------------------- vision collection
     /** Don't start another pickup with less than this left (pickup + drive + shoot). */
     public static double COLLECT_MIN_S = 9.0;
-    /** Sweep the camera this far each side while looking for balls. */
-    public static double SCAN_PAN_DEG = 60;
-    public static double SCAN_S = 1.5;
+    /** Look straight, then this far left, then right, while looking for balls. */
+    public static double SCAN_PAN_DEG = 45;
+    /** Time at each look (settling + a few frames). */
+    public static double SCAN_DWELL_S = 0.45;
+    /** Before a ball search, take a tag position fix if the last one is older than this. */
+    public static double RELOCK_AFTER_S = 6.0;
+    /** Spend at most this long getting that fix. */
+    public static double LOCK_S = 0.8;
+    /** While driving to a ball, keep re-sighting it; a sighting this close to the target counts as the same ball. */
+    public static double RESIGHT_RADIUS_IN = 8.0;
+    /** Stop re-sighting this close to the ball (it goes out of view under the intake). */
+    public static double RESIGHT_MIN_RANGE_IN = 16.0;
+    /** Only re-steer if the ball moved more than this (camera noise would otherwise restart the path every loop). */
+    public static double RESIGHT_MOVE_IN = 4.0;
     /** Give up on one ball after this long. */
     public static double PICKUP_TIMEOUT_S = 2.5;
     /** Drive the robot center this far short of the ball (front of the intake passes over it). */

@@ -75,6 +75,15 @@ Odometry then moves `TAG_GAIN` of the way toward the fix.
 - Auto watches the tags while lining up and shooting. That's also how it
   notices a tip, ours or our partner's.
 
+## Switching between jobs
+
+After a pipeline switch, or a gimbal move bigger than
+`GIMBAL_BIG_MOVE_DEG`, results are ignored for `SWITCH_SETTLE_S` /
+`GIMBAL_SETTLE_S`. Each frame is a few tens of ms old, so a moving camera
+would locate things with the wrong angle. That's also why Auto's ball
+search uses stepped looks instead of a sweep. When Auto uses which mode:
+[auto.md](auto.md).
+
 ## How balls are judged
 
 - **Opposing NECTAR is ignored.** Only POLLEN and NECTAR of our color are
